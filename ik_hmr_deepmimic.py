@@ -21,7 +21,7 @@ import cv2
 results_dir = "refined"
 file_names = os.listdir(results_dir)
 base_name = file_names[0]
-file_name = '%s.h5' % base_name
+file_name = '%s' % base_name
 file_path = os.path.join(os.getcwd(), results_dir, file_name)
 
 video_frames = list(sorted(glob.glob("out/%s/frames/*.jpg" % base_name)))
