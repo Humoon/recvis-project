@@ -19,7 +19,8 @@ import cv2
 
 
 results_dir = "refined"
-base_name = 'walken-1'
+file_names = os.listdir(results_dir)
+base_name = file_names[0]
 file_name = '%s.h5' % base_name
 file_path = os.path.join(os.getcwd(), results_dir, file_name)
 
