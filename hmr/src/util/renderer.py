@@ -456,13 +456,12 @@ def draw_skeleton(input_image, joints, draw_edges=True, vis=None, radius=None):
         if vis is not None and vis[child] == 0:
             continue
         if draw_edges:
-            cv2.circle(image, (point[0], point[1]), radius, tuple([int(colors['white'][x]) for x in range(3)]),
-                       -1)
-            cv2.circle(image, (point[0], point[1]), radius - 1,
+            cv2.circle(image, (int(point[0]), int(point[1])), radius, tuple([int(colors['white'][x]) for x in range(3)]), -1)
+            cv2.circle(image, (int(point[0]), int(point[1])), radius - 1,
                        tuple([int(colors[jcolors[child]][x]) for x in range(3)]), -1)
         else:
             # cv2.circle(image, (point[0], point[1]), 5, colors['white'], 1)
-            cv2.circle(image, (point[0], point[1]), radius - 1,
+            cv2.circle(image, (int(point[0]), int(point[1])), radius - 1,
                        tuple([int(colors[jcolors[child]][x]) for x in range(3)]), 1)
             # cv2.circle(image, (point[0], point[1]), 5, colors['gray'], -1)
         pa_id = parents[child]
@@ -470,13 +469,13 @@ def draw_skeleton(input_image, joints, draw_edges=True, vis=None, radius=None):
             if vis is not None and vis[pa_id] == 0:
                 continue
             point_pa = joints[:, pa_id]
-            cv2.circle(image, (point_pa[0], point_pa[1]), radius - 1,
+            cv2.circle(image, (int(point_pa[0]), int(point_pa[1])), radius - 1,
                        tuple([int(colors[jcolors[pa_id]][x]) for x in range(3)]), -1)
             if child not in ecolors.keys():
                 print('bad')
-                import ipdb
-                ipdb.set_trace()
-            cv2.line(image, (point[0], point[1]), (point_pa[0], point_pa[1]),
+                # import ipdb
+                # ipdb.set_trace()
+            cv2.line(image, (int(point[0]), int(point[1])), (int(point_pa[0]), int(point_pa[1])),
                      tuple([int(colors[ecolors[child]][x]) for x in range(3)]), radius - 2)
 
     # Convert back in original dtype
