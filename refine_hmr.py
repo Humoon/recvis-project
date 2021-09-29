@@ -301,19 +301,7 @@ if __name__ == '__main__':
     # For visualization.
     renderer = SMPLRenderer(img_size=config.img_size, flength=1000.,
                             face_path=config.smpl_face_path)
-    flipXRotation = np.array([[1.0, 0.0, 0.0, 0.0],
-    [0.0, -1.0, 0., 0.0],
-    [0.0, 0., -1.0, 0.0],
-    [0.0, 0.0, 0.0, 1.0]])
-    renderer.camera.openglMat = flipXRotation #this is from setupcamera in utils
-    renderer.glMode = 'glfw'
-    renderer.sharedWin = None
-    renderer.overdraw = True
-    renderer.nsamples = 8
-    renderer.msaa = True #Without anti-aliasing optimization often does not work.
-    renderer.initGL()
-    renderer.debug = False
-
+                            
     smpl = load_model(config.smpl_model_path)
 
     main(config)
