@@ -17,7 +17,9 @@ from .util.image import unprocess_image
 import time
 from os.path import exists
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 import numpy as np
 
 
@@ -33,8 +35,8 @@ class Refiner(object):
                 "[!] You should specify `load_path` to load a pretrained model")
         if not exists(config.load_path + '.index'):
             print('%s doesnt exist..' % config.load_path)
-            import ipdb
-            ipdb.set_trace()
+            # import ipdb
+            # ipdb.set_trace()
         self.config = config
         self.load_path = config.load_path
         self.num_frames = num_frames
@@ -107,8 +109,8 @@ class Refiner(object):
             self.build_refine_model()
         else:
             print('never here')
-            import ipdb
-            ipdb.set_trace()
+            # import ipdb
+            # ipdb.set_trace()
             
         all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
         # Exclude the new variable.

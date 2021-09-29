@@ -27,6 +27,9 @@ from imageio import imwrite
 
 import tensorflow as tf
 
+import os
+os.environ['KMP_WARNINGS'] = 'off'
+
 def del_all_flags(FLAGS):
     FLAGS.remove_flag_values(FLAGS.flag_values_dict())
 

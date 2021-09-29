@@ -6,10 +6,10 @@
 *.jpg
 *.png
 *.h5
-*.mp4
+# *.mp4
 AlphaPose/models
-!settings*.json
+# !settings*.json
 anim_files/
-./hmr/src/config.py
+# ./hmr/src/config.py
 bvh/
-hmr/smpl_webuser/
+# hmr/smpl_webuser/

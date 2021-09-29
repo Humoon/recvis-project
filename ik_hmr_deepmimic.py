@@ -14,6 +14,8 @@ import glob
 import matplotlib.pyplot as plt
 from hmr.src.util.renderer import draw_bbox
 import cv2
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 results_dir = "refined"
@@ -53,7 +55,7 @@ model_joints_map = [
 ]
 
 
-theta_wanted = list(smpl_names_map.keys())
+# theta_wanted = list(smpl_names_map.keys())
 
 ## One-dimensional angles
 
