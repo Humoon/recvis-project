@@ -14,8 +14,8 @@ import glob
 import matplotlib.pyplot as plt
 from hmr.src.util.renderer import draw_bbox
 import cv2
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 results_dir = "refined"
