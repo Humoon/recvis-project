@@ -77,8 +77,9 @@ class DataLoader(object):
         files = data_utils.get_all_files(self.dataset_dir, self.datasets)
 
         do_shuffle = True
-        fqueue = tf.train.string_input_producer(
-            files, shuffle=do_shuffle, name="input")
+        fqueue = tf.train.string_input_producer(files,
+                                                shuffle=do_shuffle,
+                                                name="input")
         image, label = self.read_data(fqueue, has_3d=False)
         min_after_dequeue = 5000
         num_threads = 8
@@ -130,19 +131,22 @@ class DataLoader(object):
         # Make sure we have dataset with 3D.
         if len(files_yes3d) == 0:
             print("Dont run this without any datasets with gt 3d")
-            import ipdb; ipdb.set_trace()
+            import ipdb
+            ipdb.set_trace()
             exit(1)
 
         do_shuffle = True
 
-        fqueue_yes3d = tf.train.string_input_producer(
-            files_yes3d, shuffle=do_shuffle, name="input_w3d")
-        image, label, label3d, has_smpl3d = self.read_data(
-            fqueue_yes3d, has_3d=True)
+        fqueue_yes3d = tf.train.string_input_producer(files_yes3d,
+                                                      shuffle=do_shuffle,
+                                                      name="input_w3d")
+        image, label, label3d, has_smpl3d = self.read_data(fqueue_yes3d,
+                                                           has_3d=True)
 
         if len(files_no3d) != 0:
-            fqueue_no3d = tf.train.string_input_producer(
-                files_no3d, shuffle=do_shuffle, name="input_wout3d")
+            fqueue_no3d = tf.train.string_input_producer(files_no3d,
+                                                         shuffle=do_shuffle,
+                                                         name="input_wout3d")
             image_no3d, label_no3d = self.read_data(fqueue_no3d, has_3d=False)
             label3d_no3d = tf.zeros_like(label3d)
             image = tf.parallel_stack([image, image_no3d])
@@ -219,8 +223,8 @@ class DataLoader(object):
         files = list of tf records.
         """
         with tf.name_scope('input_smpl_loader'):
-            filename_queue = tf.train.string_input_producer(
-                files, shuffle=True)
+            filename_queue = tf.train.string_input_producer(files,
+                                                            shuffle=True)
 
             mosh_batch_size = self.batch_size * self.config.num_stage
 
@@ -245,8 +249,12 @@ class DataLoader(object):
                 image, image_size, label, center, fname, pose, shape, gt3d, has_smpl3d = data_utils.parse_example_proto(
                     example_serialized, has_3d=has_3d)
                 # Need to send pose bc image can get flipped.
-                image, label, pose, gt3d = self.image_preprocessing(
-                    image, image_size, label, center, pose=pose, gt3d=gt3d)
+                image, label, pose, gt3d = self.image_preprocessing(image,
+                                                                    image_size,
+                                                                    label,
+                                                                    center,
+                                                                    pose=pose,
+                                                                    gt3d=gt3d)
 
                 # Convert pose to rotation.
                 # Do not ignore the global!!
@@ -279,7 +287,8 @@ class DataLoader(object):
                             pose=None,
                             gt3d=None):
         margin = tf.to_int32(self.output_size / 2)
-        with tf.name_scope(None, 'image_preprocessing',
+        with tf.name_scope(None,
+                           'image_preprocessing',
                            values=[image, image_size, label, center]):
             visibility = label[2, :]
             keypoints = label[:2, :]

@@ -7,7 +7,6 @@ import time
 from multiprocessing.dummy import Pool as ThreadPool
 import numpy as np
 from opt import opt
-
 ''' Constant Configuration '''
 delta1 = 1
 mu = 1.7
@@ -15,7 +14,7 @@ delta2 = 2.65
 gamma = 22.48
 scoreThreds = 0.3
 matchThreds = 5
-areaThres = 0#40 * 40.5
+areaThres = 0  #40 * 40.5
 alpha = 0.1
 #pool = ThreadPool(4)
 
@@ -54,7 +53,7 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
     # Do pPose-NMS
     pick = []
     merge_ids = []
-    while(human_scores.shape[0] != 0):
+    while (human_scores.shape[0] != 0):
         # Pick the one with highest score
         pick_id = torch.argmax(human_scores)
         pick.append(human_ids[pick_id])
@@ -62,11 +61,15 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
 
         # Get numbers of match keypoints by calling PCK_match
         ref_dist = ref_dists[human_ids[pick_id]]
-        simi = get_parametric_distance(pick_id, pose_preds, pose_scores, ref_dist)
-        num_match_keypoints = PCK_match(pose_preds[pick_id], pose_preds, ref_dist)
+        simi = get_parametric_distance(pick_id, pose_preds, pose_scores,
+                                       ref_dist)
+        num_match_keypoints = PCK_match(pose_preds[pick_id], pose_preds,
+                                        ref_dist)
 
         # Delete humans who have more than matchThreds keypoints overlap and high similarity
-        delete_ids = torch.from_numpy(np.arange(human_scores.shape[0]))[(simi > gamma) | (num_match_keypoints >= matchThreds)]
+        delete_ids = torch.from_numpy(np.arange(
+            human_scores.shape[0]))[(simi > gamma) |
+                                    (num_match_keypoints >= matchThreds)]
 
         if delete_ids.shape[0] == 0:
             delete_ids = pick_id
@@ -96,8 +99,10 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
 
         # Merge poses
         merge_id = merge_ids[j]
-        merge_pose, merge_score = p_merge_fast(
-            preds_pick[j], ori_pose_preds[merge_id], ori_pose_scores[merge_id], ref_dists[pick[j]])
+        merge_pose, merge_score = p_merge_fast(preds_pick[j],
+                                               ori_pose_preds[merge_id],
+                                               ori_pose_scores[merge_id],
+                                               ref_dists[pick[j]])
 
         max_score = torch.max(merge_score[ids])
         if max_score < scoreThreds:
@@ -108,13 +113,17 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
         ymax = max(merge_pose[:, 1])
         ymin = min(merge_pose[:, 1])
 
-        if (1.5 ** 2 * (xmax - xmin) * (ymax - ymin) < areaThres):
+        if (1.5**2 * (xmax - xmin) * (ymax - ymin) < areaThres):
             continue
 
         final_result.append({
-            'keypoints': merge_pose - 0.3,
-            'kp_score': merge_score,
-            'proposal_score': torch.mean(merge_score) + bbox_scores_pick[j] + 1.25 * max(merge_score)
+            'keypoints':
+            merge_pose - 0.3,
+            'kp_score':
+            merge_score,
+            'proposal_score':
+            torch.mean(merge_score) + bbox_scores_pick[j] +
+            1.25 * max(merge_score)
         })
 
     return final_result
@@ -130,8 +139,9 @@ def filter_result(args):
         return None
 
     # Merge poses
-    merge_pose, merge_score = p_merge_fast(
-        pred_pick, ori_pose_preds[merge_id], ori_pose_scores[merge_id], ref_dists[pick])
+    merge_pose, merge_score = p_merge_fast(pred_pick, ori_pose_preds[merge_id],
+                                           ori_pose_scores[merge_id],
+                                           ref_dists[pick])
 
     max_score = torch.max(merge_score[ids])
     if max_score < scoreThreds:
@@ -142,13 +152,16 @@ def filter_result(args):
     ymax = max(merge_pose[:, 1])
     ymin = min(merge_pose[:, 1])
 
-    if (1.5 ** 2 * (xmax - xmin) * (ymax - ymin) < 40 * 40.5):
+    if (1.5**2 * (xmax - xmin) * (ymax - ymin) < 40 * 40.5):
         return None
 
     return {
-        'keypoints': merge_pose - 0.3,
-        'kp_score': merge_score,
-        'proposal_score': torch.mean(merge_score) + bbox_score_pick + 1.25 * max(merge_score)
+        'keypoints':
+        merge_pose - 0.3,
+        'kp_score':
+        merge_score,
+        'proposal_score':
+        torch.mean(merge_score) + bbox_score_pick + 1.25 * max(merge_score)
     }
 
 
@@ -164,10 +177,9 @@ def p_merge(ref_pose, cluster_preds, cluster_scores, ref_dist):
         final_pose:     merged pose             -- [17, 2]
         final_score:    merged score            -- [17]
     '''
-    dist = torch.sqrt(torch.sum(
-        torch.pow(ref_pose[np.newaxis, :] - cluster_preds, 2),
-        dim=2
-    ))  # [n, 17]
+    dist = torch.sqrt(
+        torch.sum(torch.pow(ref_pose[np.newaxis, :] - cluster_preds, 2),
+                  dim=2))  # [n, 17]
 
     kp_num = 17
     ref_dist = min(ref_dist, 15)
@@ -191,10 +203,14 @@ def p_merge(ref_pose, cluster_preds, cluster_scores, ref_dist):
         normed_scores = cluster_joint_scores / torch.sum(cluster_joint_scores)
 
         # Merge poses by a weighted sum
-        final_pose[i, 0] = torch.dot(cluster_joint_location[:, 0], normed_scores.squeeze(-1))
-        final_pose[i, 1] = torch.dot(cluster_joint_location[:, 1], normed_scores.squeeze(-1))
+        final_pose[i, 0] = torch.dot(cluster_joint_location[:, 0],
+                                     normed_scores.squeeze(-1))
+        final_pose[i, 1] = torch.dot(cluster_joint_location[:, 1],
+                                     normed_scores.squeeze(-1))
 
-        final_score[i] = torch.dot(cluster_joint_scores.transpose(0, 1).squeeze(0), normed_scores.squeeze(-1))
+        final_score[i] = torch.dot(
+            cluster_joint_scores.transpose(0, 1).squeeze(0),
+            normed_scores.squeeze(-1))
 
     return final_pose, final_score
 
@@ -211,10 +227,9 @@ def p_merge_fast(ref_pose, cluster_preds, cluster_scores, ref_dist):
         final_pose:     merged pose             -- [17, 2]
         final_score:    merged score            -- [17]
     '''
-    dist = torch.sqrt(torch.sum(
-        torch.pow(ref_pose[np.newaxis, :] - cluster_preds, 2),
-        dim=2
-    ))
+    dist = torch.sqrt(
+        torch.sum(torch.pow(ref_pose[np.newaxis, :] - cluster_preds, 2),
+                  dim=2))
 
     kp_num = 17
     ref_dist = min(ref_dist, 15)
@@ -233,7 +248,8 @@ def p_merge_fast(ref_pose, cluster_preds, cluster_scores, ref_dist):
     masked_scores = cluster_scores.mul(mask.float().unsqueeze(-1))
     normed_scores = masked_scores / torch.sum(masked_scores, dim=0)
 
-    final_pose = torch.mul(cluster_preds, normed_scores.repeat(1, 1, 2)).sum(dim=0)
+    final_pose = torch.mul(cluster_preds, normed_scores.repeat(1, 1,
+                                                               2)).sum(dim=0)
     final_score = torch.mul(masked_scores, normed_scores).sum(dim=0)
     return final_pose, final_score
 
@@ -241,10 +257,8 @@ def p_merge_fast(ref_pose, cluster_preds, cluster_scores, ref_dist):
 def get_parametric_distance(i, all_preds, keypoint_scores, ref_dist):
     pick_preds = all_preds[i]
     pred_scores = keypoint_scores[i]
-    dist = torch.sqrt(torch.sum(
-        torch.pow(pick_preds[np.newaxis, :] - all_preds, 2),
-        dim=2
-    ))
+    dist = torch.sqrt(
+        torch.sum(torch.pow(pick_preds[np.newaxis, :] - all_preds, 2), dim=2))
     mask = (dist <= 1)
 
     # Define a keypoints distance
@@ -257,24 +271,21 @@ def get_parametric_distance(i, all_preds, keypoint_scores, ref_dist):
     # The predicted scores are repeated up to do broadcast
     pred_scores = pred_scores.repeat(1, all_preds.shape[0]).transpose(0, 1)
 
-    score_dists[mask] = torch.tanh(pred_scores[mask] / delta1) * torch.tanh(keypoint_scores[mask] / delta1)
+    score_dists[mask] = torch.tanh(pred_scores[mask] / delta1) * torch.tanh(
+        keypoint_scores[mask] / delta1)
 
     point_dist = torch.exp((-1) * dist / delta2)
-    final_dist = torch.sum(score_dists, dim=1) + mu * torch.sum(point_dist, dim=1)
+    final_dist = torch.sum(score_dists,
+                           dim=1) + mu * torch.sum(point_dist, dim=1)
 
     return final_dist
 
 
 def PCK_match(pick_pred, all_preds, ref_dist):
-    dist = torch.sqrt(torch.sum(
-        torch.pow(pick_pred[np.newaxis, :] - all_preds, 2),
-        dim=2
-    ))
+    dist = torch.sqrt(
+        torch.sum(torch.pow(pick_pred[np.newaxis, :] - all_preds, 2), dim=2))
     ref_dist = min(ref_dist, 7)
-    num_match_keypoints = torch.sum(
-        dist / ref_dist <= 1,
-        dim=1
-    )
+    num_match_keypoints = torch.sum(dist / ref_dist <= 1, dim=1)
 
     return num_match_keypoints
 
@@ -296,7 +307,8 @@ def write_json(all_results, outputpath, for_eval=False, _format=None):
             keypoints = []
             result = {}
             if for_eval:
-                result['image_id'] = int(im_name.split('/')[-1].split('.')[0].split('_')[-1])
+                result['image_id'] = int(
+                    im_name.split('/')[-1].split('.')[0].split('_')[-1])
             else:
                 result['image_id'] = im_name.split('/')[-1]
             result['category_id'] = 1
@@ -311,49 +323,68 @@ def write_json(all_results, outputpath, for_eval=False, _format=None):
             result['keypoints'] = keypoints
             result['score'] = float(pro_scores)
 
-            if form == 'cmu': # the form of CMU-Pose
+            if form == 'cmu':  # the form of CMU-Pose
                 if result['image_id'] not in json_results_cmu.keys():
-                    json_results_cmu[result['image_id']]={}
-                    json_results_cmu[result['image_id']]['version']="AlphaPose v0.2"
-                    json_results_cmu[result['image_id']]['bodies']=[]
-                tmp={'joints':[]}
-                result['keypoints'].append((result['keypoints'][15]+result['keypoints'][18])/2)
-                result['keypoints'].append((result['keypoints'][16]+result['keypoints'][19])/2)
-                result['keypoints'].append((result['keypoints'][17]+result['keypoints'][20])/2)
-                indexarr=[0,51,18,24,30,15,21,27,36,42,48,33,39,45,6,3,12,9]
+                    json_results_cmu[result['image_id']] = {}
+                    json_results_cmu[
+                        result['image_id']]['version'] = "AlphaPose v0.2"
+                    json_results_cmu[result['image_id']]['bodies'] = []
+                tmp = {'joints': []}
+                result['keypoints'].append(
+                    (result['keypoints'][15] + result['keypoints'][18]) / 2)
+                result['keypoints'].append(
+                    (result['keypoints'][16] + result['keypoints'][19]) / 2)
+                result['keypoints'].append(
+                    (result['keypoints'][17] + result['keypoints'][20]) / 2)
+                indexarr = [
+                    0, 51, 18, 24, 30, 15, 21, 27, 36, 42, 48, 33, 39, 45, 6,
+                    3, 12, 9
+                ]
                 for i in indexarr:
                     tmp['joints'].append(result['keypoints'][i])
-                    tmp['joints'].append(result['keypoints'][i+1])
-                    tmp['joints'].append(result['keypoints'][i+2])
+                    tmp['joints'].append(result['keypoints'][i + 1])
+                    tmp['joints'].append(result['keypoints'][i + 2])
                 json_results_cmu[result['image_id']]['bodies'].append(tmp)
-            elif form == 'open': # the form of OpenPose
+            elif form == 'open':  # the form of OpenPose
                 if result['image_id'] not in json_results_cmu.keys():
-                    json_results_cmu[result['image_id']]={}
-                    json_results_cmu[result['image_id']]['version']="AlphaPose v0.2"
-                    json_results_cmu[result['image_id']]['people']=[]
-                tmp={'pose_keypoints_2d':[]}
-                result['keypoints'].append((result['keypoints'][15]+result['keypoints'][18])/2)
-                result['keypoints'].append((result['keypoints'][16]+result['keypoints'][19])/2)
-                result['keypoints'].append((result['keypoints'][17]+result['keypoints'][20])/2)
-                indexarr=[0,51,18,24,30,15,21,27,36,42,48,33,39,45,6,3,12,9]
+                    json_results_cmu[result['image_id']] = {}
+                    json_results_cmu[
+                        result['image_id']]['version'] = "AlphaPose v0.2"
+                    json_results_cmu[result['image_id']]['people'] = []
+                tmp = {'pose_keypoints_2d': []}
+                result['keypoints'].append(
+                    (result['keypoints'][15] + result['keypoints'][18]) / 2)
+                result['keypoints'].append(
+                    (result['keypoints'][16] + result['keypoints'][19]) / 2)
+                result['keypoints'].append(
+                    (result['keypoints'][17] + result['keypoints'][20]) / 2)
+                indexarr = [
+                    0, 51, 18, 24, 30, 15, 21, 27, 36, 42, 48, 33, 39, 45, 6,
+                    3, 12, 9
+                ]
                 for i in indexarr:
                     tmp['pose_keypoints_2d'].append(result['keypoints'][i])
-                    tmp['pose_keypoints_2d'].append(result['keypoints'][i+1])
-                    tmp['pose_keypoints_2d'].append(result['keypoints'][i+2])
+                    tmp['pose_keypoints_2d'].append(result['keypoints'][i + 1])
+                    tmp['pose_keypoints_2d'].append(result['keypoints'][i + 2])
                 json_results_cmu[result['image_id']]['people'].append(tmp)
             else:
                 json_results.append(result)
 
-    if form == 'cmu': # the form of CMU-Pose
-        with open(os.path.join(outputpath,'alphapose-results.json'), 'w') as json_file:
+    if form == 'cmu':  # the form of CMU-Pose
+        with open(os.path.join(outputpath, 'alphapose-results.json'),
+                  'w') as json_file:
             json_file.write(json.dumps(json_results_cmu))
-            if not os.path.exists(os.path.join(outputpath,'sep-json')):
-                os.mkdir(os.path.join(outputpath,'sep-json'))
+            if not os.path.exists(os.path.join(outputpath, 'sep-json')):
+                os.mkdir(os.path.join(outputpath, 'sep-json'))
             for name in json_results_cmu.keys():
-                with open(os.path.join(outputpath,'sep-json',name.split('.')[0]+'.json'),'w') as json_file:
+                with open(
+                        os.path.join(outputpath, 'sep-json',
+                                     name.split('.')[0] + '.json'),
+                        'w') as json_file:
                     json_file.write(json.dumps(json_results_cmu[name]))
-    elif form == 'open': # the form of OpenPose
-        with open(os.path.join(outputpath,'alphapose-results.json'), 'w') as json_file:
+    elif form == 'open':  # the form of OpenPose
+        with open(os.path.join(outputpath, 'alphapose-results.json'),
+                  'w') as json_file:
             json_file.write(json.dumps(json_results_cmu))
             # if not os.path.exists(os.path.join(outputpath,'sep-json')):
             #     os.mkdir(os.path.join(outputpath,'sep-json'))
@@ -361,6 +392,6 @@ def write_json(all_results, outputpath, for_eval=False, _format=None):
             #     with open(os.path.join(outputpath,'sep-json',name.split('.')[0]+'.json'),'w') as json_file:
             #         json_file.write(json.dumps(json_results_cmu[name]))
     else:
-        with open(os.path.join(outputpath,'alphapose-results.json'), 'w') as json_file:
+        with open(os.path.join(outputpath, 'alphapose-results.json'),
+                  'w') as json_file:
             json_file.write(json.dumps(json_results))
-

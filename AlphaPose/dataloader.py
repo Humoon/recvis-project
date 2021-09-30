@@ -80,8 +80,14 @@ class Image_loader(data.Dataset):
     def __len__(self):
         return len(self.imglist)
 
+
 class ImageLoader:
-    def __init__(self, im_names, batchSize=1, format='yolo', queueSize=50, dir_path=None):
+    def __init__(self,
+                 im_names,
+                 batchSize=1,
+                 format='yolo',
+                 queueSize=50,
+                 dir_path=None):
         if dir_path is None:
             self.img_dir = opt.inputpath
         else:
@@ -119,7 +125,7 @@ class ImageLoader:
             else:
                 p = mp.Process(target=self.getitem_yolo, args=())
         else:
-            raise NotImplementedError        
+            raise NotImplementedError
         p.daemon = True
         p.start()
         return self
@@ -147,11 +153,13 @@ class ImageLoader:
             orig_img = []
             im_name = []
             im_dim_list = []
-            for k in range(i*self.batchSize, min((i +  1)*self.batchSize, self.datalen)):
+            for k in range(i * self.batchSize,
+                           min((i + 1) * self.batchSize, self.datalen)):
                 inp_dim = int(opt.inp_dim)
                 im_name_k = self.imglist[k].rstrip('\n').rstrip('\r')
                 im_name_k = os.path.join(self.img_dir, im_name_k)
-                img_k, orig_img_k, im_dim_list_k = prep_image(im_name_k, inp_dim)
+                img_k, orig_img_k, im_dim_list_k = prep_image(
+                    im_name_k, inp_dim)
                 img.append(img_k)
                 orig_img.append(orig_img_k)
                 im_name.append(im_name_k)
@@ -160,13 +168,12 @@ class ImageLoader:
             with torch.no_grad():
                 # Human Detection
                 img = torch.cat(img)
-                im_dim_list = torch.FloatTensor(im_dim_list).repeat(1,2)
+                im_dim_list = torch.FloatTensor(im_dim_list).repeat(1, 2)
                 im_dim_list_ = im_dim_list
-
 
             while self.Q.full():
                 time.sleep(2)
-            
+
             self.Q.put((img, orig_img, im_name, im_dim_list))
 
     def getitem(self):
@@ -178,6 +185,7 @@ class ImageLoader:
     def len(self):
         return self.Q.qsize()
 
+
 class VideoLoader:
     def __init__(self, path, batchSize=1, queueSize=50):
         # initialize the file video stream along with the boolean
@@ -185,11 +193,11 @@ class VideoLoader:
         self.path = path
         stream = cv2.VideoCapture(path)
         assert stream.isOpened(), 'Cannot capture source'
-        self.fourcc=int(stream.get(cv2.CAP_PROP_FOURCC))
-        self.fps=stream.get(cv2.CAP_PROP_FPS)
-        self.frameSize=(int(stream.get(cv2.CAP_PROP_FRAME_WIDTH)),int(stream.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        self.fourcc = int(stream.get(cv2.CAP_PROP_FOURCC))
+        self.fps = stream.get(cv2.CAP_PROP_FPS)
+        self.frameSize = (int(stream.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                          int(stream.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         self.stopped = False
-        
 
         self.batchSize = batchSize
         self.datalen = int(stream.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -229,39 +237,40 @@ class VideoLoader:
             orig_img = []
             im_name = []
             im_dim_list = []
-            for k in range(i*self.batchSize, min((i +  1)*self.batchSize, self.datalen)):
+            for k in range(i * self.batchSize,
+                           min((i + 1) * self.batchSize, self.datalen)):
                 inp_dim = int(opt.inp_dim)
                 (grabbed, frame) = stream.read()
                 # if the `grabbed` boolean is `False`, then we have
                 # reached the end of the video file
                 if not grabbed:
                     self.Q.put((None, None, None, None))
-                    print('===========================> This video get '+str(k)+' frames in total.')
+                    print('===========================> This video get ' +
+                          str(k) + ' frames in total.')
                     sys.stdout.flush()
                     return
                 # process and add the frame to the queue
                 img_k, orig_img_k, im_dim_list_k = prep_frame(frame, inp_dim)
-            
+
                 img.append(img_k)
                 orig_img.append(orig_img_k)
-                im_name.append(str(k)+'.jpg')
+                im_name.append(str(k) + '.jpg')
                 im_dim_list.append(im_dim_list_k)
 
             with torch.no_grad():
                 # Human Detection
                 img = torch.cat(img)
-                im_dim_list = torch.FloatTensor(im_dim_list).repeat(1,2)
+                im_dim_list = torch.FloatTensor(im_dim_list).repeat(1, 2)
                 im_dim_list_ = im_dim_list
-
 
             while self.Q.full():
                 time.sleep(2)
-            
+
             self.Q.put((img, orig_img, im_name, im_dim_list))
 
     def videoinfo(self):
         # indicate the video info
-        return (self.fourcc,self.fps,self.frameSize)
+        return (self.fourcc, self.fps, self.frameSize)
 
     def getitem(self):
         # return next frame in the queue
@@ -276,8 +285,10 @@ class DetectionLoader:
         # initialize the file video stream along with the boolean
         # used to indicate if the thread should be stopped or not
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.det_model = Darknet(os.path.join(dir_path,"yolo/cfg/yolov3-spp.cfg"))
-        self.det_model.load_weights(os.path.join(dir_path,'models/yolo/yolov3-spp.weights'))
+        self.det_model = Darknet(
+            os.path.join(dir_path, "yolo/cfg/yolov3-spp.cfg"))
+        self.det_model.load_weights(
+            os.path.join(dir_path, 'models/yolo/yolov3-spp.weights'))
         self.det_model.net_info['height'] = opt.inp_dim
         self.det_inp_dim = int(self.det_model.net_info['height'])
         assert self.det_inp_dim % 32 == 0
@@ -325,43 +336,55 @@ class DetectionLoader:
                 img = img.cuda()
                 prediction = self.det_model(img, CUDA=True)
                 # NMS process
-                dets = dynamic_write_results(prediction, opt.confidence,
-                                    opt.num_classes, nms=True, nms_conf=opt.nms_thesh)
+                dets = dynamic_write_results(prediction,
+                                             opt.confidence,
+                                             opt.num_classes,
+                                             nms=True,
+                                             nms_conf=opt.nms_thesh)
                 if isinstance(dets, int) or dets.shape[0] == 0:
                     for k in range(len(orig_img)):
                         if self.Q.full():
                             time.sleep(2)
-                        self.Q.put((orig_img[k], im_name[k], None, None, None, None, None))
+                        self.Q.put((orig_img[k], im_name[k], None, None, None,
+                                    None, None))
                     continue
                 dets = dets.cpu()
-                im_dim_list = torch.index_select(im_dim_list,0, dets[:, 0].long())
-                scaling_factor = torch.min(self.det_inp_dim / im_dim_list, 1)[0].view(-1, 1)
+                im_dim_list = torch.index_select(im_dim_list, 0,
+                                                 dets[:, 0].long())
+                scaling_factor = torch.min(self.det_inp_dim / im_dim_list,
+                                           1)[0].view(-1, 1)
 
                 # coordinate transfer
-                dets[:, [1, 3]] -= (self.det_inp_dim - scaling_factor * im_dim_list[:, 0].view(-1, 1)) / 2
-                dets[:, [2, 4]] -= (self.det_inp_dim - scaling_factor * im_dim_list[:, 1].view(-1, 1)) / 2
+                dets[:, [1, 3]] -= (self.det_inp_dim - scaling_factor *
+                                    im_dim_list[:, 0].view(-1, 1)) / 2
+                dets[:, [2, 4]] -= (self.det_inp_dim - scaling_factor *
+                                    im_dim_list[:, 1].view(-1, 1)) / 2
 
-                
                 dets[:, 1:5] /= scaling_factor
                 for j in range(dets.shape[0]):
-                    dets[j, [1, 3]] = torch.clamp(dets[j, [1, 3]], 0.0, im_dim_list[j, 0])
-                    dets[j, [2, 4]] = torch.clamp(dets[j, [2, 4]], 0.0, im_dim_list[j, 1])
+                    dets[j, [1, 3]] = torch.clamp(dets[j, [1, 3]], 0.0,
+                                                  im_dim_list[j, 0])
+                    dets[j, [2, 4]] = torch.clamp(dets[j, [2, 4]], 0.0,
+                                                  im_dim_list[j, 1])
                 boxes = dets[:, 1:5]
                 scores = dets[:, 5:6]
 
             for k in range(len(orig_img)):
-                boxes_k = boxes[dets[:,0]==k]
+                boxes_k = boxes[dets[:, 0] == k]
                 if isinstance(boxes_k, int) or boxes_k.shape[0] == 0:
                     if self.Q.full():
                         time.sleep(2)
-                    self.Q.put((orig_img[k], im_name[k], None, None, None, None, None))
+                    self.Q.put((orig_img[k], im_name[k], None, None, None,
+                                None, None))
                     continue
-                inps = torch.zeros(boxes_k.size(0), 3, opt.inputResH, opt.inputResW)
+                inps = torch.zeros(boxes_k.size(0), 3, opt.inputResH,
+                                   opt.inputResW)
                 pt1 = torch.zeros(boxes_k.size(0), 2)
                 pt2 = torch.zeros(boxes_k.size(0), 2)
                 if self.Q.full():
                     time.sleep(2)
-                self.Q.put((orig_img[k], im_name[k], boxes_k, scores[dets[:,0]==k], inps, pt1, pt2))
+                self.Q.put((orig_img[k], im_name[k], boxes_k,
+                            scores[dets[:, 0] == k], inps, pt1, pt2))
 
     def read(self):
         # return next frame in the queue
@@ -401,16 +424,18 @@ class DetectionProcessor:
     def update(self):
         # keep looping the whole dataset
         for i in range(self.datalen):
-            
+
             with torch.no_grad():
-                (orig_img, im_name, boxes, scores, inps, pt1, pt2) = self.detectionLoader.read()
+                (orig_img, im_name, boxes, scores, inps, pt1,
+                 pt2) = self.detectionLoader.read()
                 if orig_img is None:
                     self.Q.put((None, None, None, None, None, None, None))
                     return
                 if boxes is None or boxes.nelement() == 0:
                     while self.Q.full():
                         time.sleep(0.2)
-                    self.Q.put((None, orig_img, im_name, boxes, scores, None, None))
+                    self.Q.put(
+                        (None, orig_img, im_name, boxes, scores, None, None))
                     continue
                 inp = im_to_torch(cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB))
                 inps, pt1, pt2 = crop_from_dets(inp, boxes, inps, pt1, pt2)
@@ -475,7 +500,8 @@ class VideoDetectionLoader:
             orig_img = []
             im_name = []
             im_dim_list = []
-            for k in range(i*self.batchSize, min((i +  1)*self.batchSize, self.datalen)):
+            for k in range(i * self.batchSize,
+                           min((i + 1) * self.batchSize, self.datalen)):
                 (grabbed, frame) = self.stream.read()
                 # if the `grabbed` boolean is `False`, then we have
                 # reached the end of the video file
@@ -497,13 +523,16 @@ class VideoDetectionLoader:
                 wd = inp[0].size(2)
                 # Human Detection
                 img = Variable(torch.cat(img)).cuda()
-                im_dim_list = torch.FloatTensor(im_dim_list).repeat(1,2)
+                im_dim_list = torch.FloatTensor(im_dim_list).repeat(1, 2)
                 im_dim_list = im_dim_list.cuda()
 
                 prediction = self.det_model(img, CUDA=True)
                 # NMS process
-                dets = dynamic_write_results(prediction, opt.confidence,
-                                    opt.num_classes, nms=True, nms_conf=opt.nms_thesh)
+                dets = dynamic_write_results(prediction,
+                                             opt.confidence,
+                                             opt.num_classes,
+                                             nms=True,
+                                             nms_conf=opt.nms_thesh)
                 if isinstance(dets, int) or dets.shape[0] == 0:
                     for k in range(len(inp)):
                         while self.Q.full():
@@ -511,31 +540,39 @@ class VideoDetectionLoader:
                         self.Q.put((inp[k], orig_img[k], None, None))
                     continue
 
-                im_dim_list = torch.index_select(im_dim_list,0, dets[:, 0].long())
-                scaling_factor = torch.min(self.det_inp_dim / im_dim_list, 1)[0].view(-1, 1)
+                im_dim_list = torch.index_select(im_dim_list, 0,
+                                                 dets[:, 0].long())
+                scaling_factor = torch.min(self.det_inp_dim / im_dim_list,
+                                           1)[0].view(-1, 1)
 
                 # coordinate transfer
-                dets[:, [1, 3]] -= (self.det_inp_dim - scaling_factor * im_dim_list[:, 0].view(-1, 1)) / 2
-                dets[:, [2, 4]] -= (self.det_inp_dim - scaling_factor * im_dim_list[:, 1].view(-1, 1)) / 2
+                dets[:, [1, 3]] -= (self.det_inp_dim - scaling_factor *
+                                    im_dim_list[:, 0].view(-1, 1)) / 2
+                dets[:, [2, 4]] -= (self.det_inp_dim - scaling_factor *
+                                    im_dim_list[:, 1].view(-1, 1)) / 2
 
                 dets[:, 1:5] /= scaling_factor
                 for j in range(dets.shape[0]):
-                    dets[j, [1, 3]] = torch.clamp(dets[j, [1, 3]], 0.0, im_dim_list[j, 0])
-                    dets[j, [2, 4]] = torch.clamp(dets[j, [2, 4]], 0.0, im_dim_list[j, 1])
+                    dets[j, [1, 3]] = torch.clamp(dets[j, [1, 3]], 0.0,
+                                                  im_dim_list[j, 0])
+                    dets[j, [2, 4]] = torch.clamp(dets[j, [2, 4]], 0.0,
+                                                  im_dim_list[j, 1])
                 boxes = dets[:, 1:5].cpu()
                 scores = dets[:, 5:6].cpu()
 
             for k in range(len(inp)):
                 while self.Q.full():
                     time.sleep(0.2)
-                self.Q.put((inp[k], orig_img[k], boxes[dets[:,0]==k], scores[dets[:,0]==k]))
+                self.Q.put((inp[k], orig_img[k], boxes[dets[:, 0] == k],
+                            scores[dets[:, 0] == k]))
 
     def videoinfo(self):
         # indicate the video info
-        fourcc=int(self.stream.get(cv2.CAP_PROP_FOURCC))
-        fps=self.stream.get(cv2.CAP_PROP_FPS)
-        frameSize=(int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)),int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-        return (fourcc,fps,frameSize)
+        fourcc = int(self.stream.get(cv2.CAP_PROP_FOURCC))
+        fps = self.stream.get(cv2.CAP_PROP_FPS)
+        frameSize = (int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                     int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        return (fourcc, fps, frameSize)
 
     def read(self):
         # return next frame in the queue
@@ -590,12 +627,14 @@ class WebcamLoader:
             else:
                 with self.Q.mutex:
                     self.Q.queue.clear()
+
     def videoinfo(self):
         # indicate the video info
-        fourcc=int(self.stream.get(cv2.CAP_PROP_FOURCC))
-        fps=self.stream.get(cv2.CAP_PROP_FPS)
-        frameSize=(int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)),int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-        return (fourcc,fps,frameSize)
+        fourcc = int(self.stream.get(cv2.CAP_PROP_FOURCC))
+        fps = self.stream.get(cv2.CAP_PROP_FPS)
+        frameSize = (int(self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                     int(self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        return (fourcc, fps, frameSize)
 
     def read(self):
         # return next frame in the queue
@@ -609,10 +648,15 @@ class WebcamLoader:
         # indicate that the thread should be stopped
         self.stopped = True
 
+
 class DataWriter:
-    def __init__(self, save_video=False,
-                savepath='examples/res/1.avi', fourcc=cv2.VideoWriter_fourcc(*'XVID'), fps=25, frameSize=(640,480),
-                queueSize=1024):
+    def __init__(self,
+                 save_video=False,
+                 savepath='examples/res/1.avi',
+                 fourcc=cv2.VideoWriter_fourcc(*'XVID'),
+                 fps=25,
+                 frameSize=(640, 480),
+                 queueSize=1024):
         if save_video:
             # initialize the file video stream along with the boolean
             # used to indicate if the thread should be stopped or not
@@ -646,7 +690,8 @@ class DataWriter:
                 return
             # otherwise, ensure the queue is not empty
             if not self.Q.empty():
-                (boxes, scores, hm_data, pt1, pt2, orig_img, im_name) = self.Q.get()
+                (boxes, scores, hm_data, pt1, pt2, orig_img,
+                 im_name) = self.Q.get()
                 orig_img = np.array(orig_img, dtype=np.uint8)
                 if boxes is None:
                     if opt.save_img or opt.save_video or opt.vis:
@@ -655,24 +700,28 @@ class DataWriter:
                             cv2.imshow("AlphaPose Demo", img)
                             cv2.waitKey(30)
                         if opt.save_img:
-                            cv2.imwrite(os.path.join(opt.outputpath, 'vis', im_name), img)
+                            cv2.imwrite(
+                                os.path.join(opt.outputpath, 'vis', im_name),
+                                img)
                         if opt.save_video:
                             self.stream.write(img)
                 else:
                     # location prediction (n, kp, 2) | score prediction (n, kp, 1)
                     if opt.matching:
-                        preds = getMultiPeakPrediction(
-                            hm_data, pt1.numpy(), pt2.numpy(), opt.inputResH, opt.inputResW, opt.outputResH, opt.outputResW)
+                        preds = getMultiPeakPrediction(hm_data, pt1.numpy(),
+                                                       pt2.numpy(),
+                                                       opt.inputResH,
+                                                       opt.inputResW,
+                                                       opt.outputResH,
+                                                       opt.outputResW)
                         result = matching(boxes, scores.numpy(), preds)
                     else:
                         preds_hm, preds_img, preds_scores = getPrediction(
-                            hm_data, pt1, pt2, opt.inputResH, opt.inputResW, opt.outputResH, opt.outputResW)
-                        result = pose_nms(
-                            boxes, scores, preds_img, preds_scores)
-                    result = {
-                        'imgname': im_name,
-                        'result': result
-                    }
+                            hm_data, pt1, pt2, opt.inputResH, opt.inputResW,
+                            opt.outputResH, opt.outputResW)
+                        result = pose_nms(boxes, scores, preds_img,
+                                          preds_scores)
+                    result = {'imgname': im_name, 'result': result}
                     self.final_result.append(result)
                     if opt.save_img or opt.save_video or opt.vis:
                         img = vis_frame(orig_img, result)
@@ -680,7 +729,9 @@ class DataWriter:
                             cv2.imshow("AlphaPose Demo", img)
                             cv2.waitKey(30)
                         if opt.save_img:
-                            cv2.imwrite(os.path.join(opt.outputpath, 'vis', im_name), img)
+                            cv2.imwrite(
+                                os.path.join(opt.outputpath, 'vis', im_name),
+                                img)
                         if opt.save_video:
                             self.stream.write(img)
             else:
@@ -708,11 +759,16 @@ class DataWriter:
         # return queue len
         return self.Q.qsize()
 
+
 class Mscoco(data.Dataset):
-    def __init__(self, train=True, sigma=1,
-                 scale_factor=(0.2, 0.3), rot_factor=40, label_type='Gaussian'):
-        self.img_folder = '../data/coco/images'    # root image folders
-        self.is_train = train           # training set or test set
+    def __init__(self,
+                 train=True,
+                 sigma=1,
+                 scale_factor=(0.2, 0.3),
+                 rot_factor=40,
+                 label_type='Gaussian'):
+        self.img_folder = '../data/coco/images'  # root image folders
+        self.is_train = train  # training set or test set
         self.inputResH = opt.inputResH
         self.inputResW = opt.inputResW
         self.outputResH = opt.outputResH
@@ -726,10 +782,9 @@ class Mscoco(data.Dataset):
         self.nJoints_mpii = 16
         self.nJoints = 33
 
-        self.accIdxs = (1, 2, 3, 4, 5, 6, 7, 8,
-                        9, 10, 11, 12, 13, 14, 15, 16, 17)
-        self.flipRef = ((2, 3), (4, 5), (6, 7),
-                        (8, 9), (10, 11), (12, 13),
+        self.accIdxs = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                        17)
+        self.flipRef = ((2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13),
                         (14, 15), (16, 17))
 
     def __getitem__(self, index):
@@ -751,10 +806,8 @@ def crop_from_dets(img, boxes, inps, pt1, pt2):
     tmp_img[1].add_(-0.457)
     tmp_img[2].add_(-0.480)
     for i, box in enumerate(boxes):
-        upLeft = torch.Tensor(
-            (float(box[0]), float(box[1])))
-        bottomRight = torch.Tensor(
-            (float(box[2]), float(box[3])))
+        upLeft = torch.Tensor((float(box[0]), float(box[1])))
+        bottomRight = torch.Tensor((float(box[2]), float(box[3])))
 
         ht = bottomRight[1] - upLeft[1]
         width = bottomRight[0] - upLeft[0]
@@ -764,12 +817,14 @@ def crop_from_dets(img, boxes, inps, pt1, pt2):
         upLeft[0] = max(0, upLeft[0] - width * scaleRate / 2)
         upLeft[1] = max(0, upLeft[1] - ht * scaleRate / 2)
         bottomRight[0] = max(
-            min(imgwidth - 1, bottomRight[0] + width * scaleRate / 2), upLeft[0] + 5)
+            min(imgwidth - 1, bottomRight[0] + width * scaleRate / 2),
+            upLeft[0] + 5)
         bottomRight[1] = max(
             min(imght - 1, bottomRight[1] + ht * scaleRate / 2), upLeft[1] + 5)
 
         try:
-            inps[i] = cropBox(tmp_img.clone(), upLeft, bottomRight, opt.inputResH, opt.inputResW)
+            inps[i] = cropBox(tmp_img.clone(), upLeft, bottomRight,
+                              opt.inputResH, opt.inputResW)
         except IndexError:
             print(tmp_img.shape)
             print(upLeft)

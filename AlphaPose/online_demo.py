@@ -33,6 +33,7 @@ def loop():
         yield n
         n += 1
 
+
 if __name__ == "__main__":
     webcam = args.webcam
     mode = args.mode
@@ -41,10 +42,13 @@ if __name__ == "__main__":
 
     # Load input video
     fvs = WebcamLoader(webcam).start()
-    (fourcc,fps,frameSize) = fvs.videoinfo()
+    (fourcc, fps, frameSize) = fvs.videoinfo()
     # Data writer
-    save_path = os.path.join(args.outputpath, 'AlphaPose_webcam'+webcam+'.avi')
-    writer = DataWriter(args.save_video, save_path, cv2.VideoWriter_fourcc(*'XVID'), fps, frameSize).start()
+    save_path = os.path.join(args.outputpath,
+                             'AlphaPose_webcam' + webcam + '.avi')
+    writer = DataWriter(args.save_video, save_path,
+                        cv2.VideoWriter_fourcc(*'XVID'), fps,
+                        frameSize).start()
 
     # Load YOLO model
     print('Loading YOLO model..')
@@ -67,17 +71,11 @@ if __name__ == "__main__":
     pose_model.cuda()
     pose_model.eval()
 
-    runtime_profile = {
-        'ld': [],
-        'dt': [],
-        'dn': [],
-        'pt': [],
-        'pn': []
-    }
+    runtime_profile = {'ld': [], 'dt': [], 'dn': [], 'pt': [], 'pn': []}
 
     print('Starting webcam demo, press Ctrl + C to terminate...')
     sys.stdout.flush()
-    im_names_desc =  tqdm(loop())
+    im_names_desc = tqdm(loop())
     for i in im_names_desc:
         try:
             start_time = getTime()
@@ -94,28 +92,44 @@ if __name__ == "__main__":
                 ckpt_time, det_time = getTime(ckpt_time)
                 runtime_profile['dt'].append(det_time)
                 # NMS process
-                dets = dynamic_write_results(prediction, opt.confidence,
-                                     opt.num_classes, nms=True, nms_conf=opt.nms_thesh)
+                dets = dynamic_write_results(prediction,
+                                             opt.confidence,
+                                             opt.num_classes,
+                                             nms=True,
+                                             nms_conf=opt.nms_thesh)
                 if isinstance(dets, int) or dets.shape[0] == 0:
-                    writer.save(None, None, None, None, None, orig_img, im_name=str(i)+'.jpg')
+                    writer.save(None,
+                                None,
+                                None,
+                                None,
+                                None,
+                                orig_img,
+                                im_name=str(i) + '.jpg')
                     continue
-                im_dim_list = torch.index_select(im_dim_list, 0, dets[:, 0].long())
-                scaling_factor = torch.min(det_inp_dim / im_dim_list, 1)[0].view(-1, 1)
+                im_dim_list = torch.index_select(im_dim_list, 0,
+                                                 dets[:, 0].long())
+                scaling_factor = torch.min(det_inp_dim / im_dim_list,
+                                           1)[0].view(-1, 1)
 
                 # coordinate transfer
-                dets[:, [1, 3]] -= (det_inp_dim - scaling_factor * im_dim_list[:, 0].view(-1, 1)) / 2
-                dets[:, [2, 4]] -= (det_inp_dim - scaling_factor * im_dim_list[:, 1].view(-1, 1)) / 2
+                dets[:, [1, 3]] -= (det_inp_dim - scaling_factor *
+                                    im_dim_list[:, 0].view(-1, 1)) / 2
+                dets[:, [2, 4]] -= (det_inp_dim - scaling_factor *
+                                    im_dim_list[:, 1].view(-1, 1)) / 2
 
                 dets[:, 1:5] /= scaling_factor
                 for j in range(dets.shape[0]):
-                    dets[j, [1, 3]] = torch.clamp(dets[j, [1, 3]], 0.0, im_dim_list[j, 0])
-                    dets[j, [2, 4]] = torch.clamp(dets[j, [2, 4]], 0.0, im_dim_list[j, 1])
+                    dets[j, [1, 3]] = torch.clamp(dets[j, [1, 3]], 0.0,
+                                                  im_dim_list[j, 0])
+                    dets[j, [2, 4]] = torch.clamp(dets[j, [2, 4]], 0.0,
+                                                  im_dim_list[j, 1])
                 boxes = dets[:, 1:5].cpu()
                 scores = dets[:, 5:6].cpu()
                 ckpt_time, detNMS_time = getTime(ckpt_time)
                 runtime_profile['dn'].append(detNMS_time)
                 # Pose Estimation
-                inps = torch.zeros(boxes.size(0), 3, opt.inputResH, opt.inputResW)
+                inps = torch.zeros(boxes.size(0), 3, opt.inputResH,
+                                   opt.inputResW)
                 pt1 = torch.zeros(boxes.size(0), 2)
                 pt2 = torch.zeros(boxes.size(0), 2)
                 inps, pt1, pt2 = crop_from_dets(inp, boxes, inps, pt1, pt2)
@@ -125,26 +139,38 @@ if __name__ == "__main__":
                 ckpt_time, pose_time = getTime(ckpt_time)
                 runtime_profile['pt'].append(pose_time)
 
-                writer.save(boxes, scores, hm.cpu(), pt1, pt2, orig_img, im_name=str(i)+'.jpg')
-                
+                writer.save(boxes,
+                            scores,
+                            hm.cpu(),
+                            pt1,
+                            pt2,
+                            orig_img,
+                            im_name=str(i) + '.jpg')
+
                 ckpt_time, post_time = getTime(ckpt_time)
                 runtime_profile['pn'].append(post_time)
 
             # TQDM
             im_names_desc.set_description(
-                'load time: {ld:.4f} | det time: {dt:.4f} | det NMS: {dn:.4f} | pose time: {pt:.4f} | post process: {pn:.4f}'.format(
-                    ld=np.mean(runtime_profile['ld']), dt=np.mean(runtime_profile['dt']), dn=np.mean(runtime_profile['dn']),
-                    pt=np.mean(runtime_profile['pt']), pn=np.mean(runtime_profile['pn']))
-            )
+                'load time: {ld:.4f} | det time: {dt:.4f} | det NMS: {dn:.4f} | pose time: {pt:.4f} | post process: {pn:.4f}'
+                .format(ld=np.mean(runtime_profile['ld']),
+                        dt=np.mean(runtime_profile['dt']),
+                        dn=np.mean(runtime_profile['dn']),
+                        pt=np.mean(runtime_profile['pt']),
+                        pn=np.mean(runtime_profile['pn'])))
         except KeyboardInterrupt:
             break
 
     print(' ')
     print('===========================> Finish Model Running.')
     if (args.save_img or args.save_video) and not args.vis_fast:
-        print('===========================> Rendering remaining images in the queue...')
-        print('===========================> If this step takes too long, you can enable the --vis_fast flag to use fast rendering (real-time).')
-    while(writer.running()):
+        print(
+            '===========================> Rendering remaining images in the queue...'
+        )
+        print(
+            '===========================> If this step takes too long, you can enable the --vis_fast flag to use fast rendering (real-time).'
+        )
+    while (writer.running()):
         pass
     writer.stop()
     final_result = writer.results()

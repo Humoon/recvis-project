@@ -26,8 +26,10 @@ import numpy as np
 import skimage.io as io
 import tensorflow as tf
 
+
 def del_all_flags(FLAGS):
     FLAGS.remove_flag_values(FLAGS.flag_values_dict())
+
 
 del_all_flags(tf.flags.FLAGS)
 
@@ -52,14 +54,21 @@ def visualize(img, proc_param, joints, verts, cam):
 
     # Render results
     skel_img = vis_util.draw_skeleton(img, joints_orig)
-    rend_img_overlay = renderer(
-        vert_shifted, cam=cam_for_render, img=img, do_alpha=True)
-    rend_img = renderer(
-        vert_shifted, cam=cam_for_render, img_size=img.shape[:2])
-    rend_img_vp1 = renderer.rotated(
-        vert_shifted, 60, cam=cam_for_render, img_size=img.shape[:2])
-    rend_img_vp2 = renderer.rotated(
-        vert_shifted, -60, cam=cam_for_render, img_size=img.shape[:2])
+    rend_img_overlay = renderer(vert_shifted,
+                                cam=cam_for_render,
+                                img=img,
+                                do_alpha=True)
+    rend_img = renderer(vert_shifted,
+                        cam=cam_for_render,
+                        img_size=img.shape[:2])
+    rend_img_vp1 = renderer.rotated(vert_shifted,
+                                    60,
+                                    cam=cam_for_render,
+                                    img_size=img.shape[:2])
+    rend_img_vp2 = renderer.rotated(vert_shifted,
+                                    -60,
+                                    cam=cam_for_render,
+                                    img_size=img.shape[:2])
 
     import matplotlib.pyplot as plt
     # plt.ion()
@@ -133,8 +142,8 @@ def main(img_path, json_path=None):
     # where camera is 3D [s, tx, ty]
     # pose is 72D vector holding the rotation of 24 joints of SMPL in axis angle format
     # shape is 10D shape coefficients of SMPL
-    joints, verts, cams, joints3d, theta = model.predict(
-        input_img, get_theta=True)
+    joints, verts, cams, joints3d, theta = model.predict(input_img,
+                                                         get_theta=True)
 
     visualize(img, proc_param, joints[0], verts[0], cams[0])
 

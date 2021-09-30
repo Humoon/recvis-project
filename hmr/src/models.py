@@ -41,12 +41,11 @@ def Encoder_resnet(x, is_training=True, weight_decay=0.001, reuse=False):
     with tf.name_scope("Encoder_resnet", values=[x]):
         with slim.arg_scope(
                 resnet_v2.resnet_arg_scope(weight_decay=weight_decay)):
-            net, end_points = resnet_v2.resnet_v2_50(
-                x,
-                num_classes=None,
-                is_training=is_training,
-                reuse=reuse,
-                scope='resnet_v2_50')
+            net, end_points = resnet_v2.resnet_v2_50(x,
+                                                     num_classes=None,
+                                                     is_training=is_training,
+                                                     reuse=reuse,
+                                                     scope='resnet_v2_50')
             net = tf.squeeze(net, axis=[1, 2])
     variables = tensorflow.contrib.framework.get_variables('resnet_v2_50')
     return net, variables
@@ -79,14 +78,14 @@ def Encoder_fc3_dropout(x,
         net = slim.dropout(net, 0.5, is_training=is_training, scope='dropout1')
         net = slim.fully_connected(net, 1024, scope='fc2')
         net = slim.dropout(net, 0.5, is_training=is_training, scope='dropout2')
-        small_xavier = variance_scaling_initializer(
-            factor=.01, mode='FAN_AVG', uniform=True)
-        net = slim.fully_connected(
-            net,
-            num_output,
-            activation_fn=None,
-            weights_initializer=small_xavier,
-            scope='fc3')
+        small_xavier = variance_scaling_initializer(factor=.01,
+                                                    mode='FAN_AVG',
+                                                    uniform=True)
+        net = slim.fully_connected(net,
+                                   num_output,
+                                   activation_fn=None,
+                                   weights_initializer=small_xavier,
+                                   scope='fc3')
 
     variables = tensorflow.contrib.framework.get_variables(scope)
     return net, variables
@@ -116,9 +115,9 @@ def get_encoder_fn_separate(model_type):
 
 
 def Discriminator_separable_rotations(
-        poses,
-        shapes,
-        weight_decay,
+    poses,
+    shapes,
+    weight_decay,
 ):
     """
     23 Discriminators on each joint + 1 for all joints + 1 for shape.
@@ -147,34 +146,36 @@ def Discriminator_separable_rotations(
                     theta_out = []
                     for i in range(0, 23):
                         theta_out.append(
-                            slim.fully_connected(
-                                poses[:, i, :, :],
-                                1,
-                                activation_fn=None,
-                                scope="pose_out_j%d" % i))
+                            slim.fully_connected(poses[:, i, :, :],
+                                                 1,
+                                                 activation_fn=None,
+                                                 scope="pose_out_j%d" % i))
                     theta_out_all = tf.squeeze(tf.stack(theta_out, axis=1))
 
                     # Do shape on it's own:
-                    shapes = slim.stack(
-                        shapes,
-                        slim.fully_connected, [10, 5],
-                        scope="shape_fc1")
-                    shape_out = slim.fully_connected(
-                        shapes, 1, activation_fn=None, scope="shape_final")
+                    shapes = slim.stack(shapes,
+                                        slim.fully_connected, [10, 5],
+                                        scope="shape_fc1")
+                    shape_out = slim.fully_connected(shapes,
+                                                     1,
+                                                     activation_fn=None,
+                                                     scope="shape_final")
                     """ Compute joint correlation prior!"""
                     nz_feat = 1024
                     poses_all = slim.flatten(poses, scope='vectorize')
-                    poses_all = slim.fully_connected(
-                        poses_all, nz_feat, scope="D_alljoints_fc1")
-                    poses_all = slim.fully_connected(
-                        poses_all, nz_feat, scope="D_alljoints_fc2")
+                    poses_all = slim.fully_connected(poses_all,
+                                                     nz_feat,
+                                                     scope="D_alljoints_fc1")
+                    poses_all = slim.fully_connected(poses_all,
+                                                     nz_feat,
+                                                     scope="D_alljoints_fc2")
                     poses_all_out = slim.fully_connected(
                         poses_all,
                         1,
                         activation_fn=None,
                         scope="D_alljoints_out")
-                    out = tf.concat([theta_out_all,
-                                     poses_all_out, shape_out], 1)
+                    out = tf.concat([theta_out_all, poses_all_out, shape_out],
+                                    1)
 
             variables = tensorflow.contrib.framework.get_variables(scope)
             return out, variables

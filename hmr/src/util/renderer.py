@@ -55,29 +55,27 @@ class SMPLRenderer(object):
         if cam is None:
             cam = [self.flength, w / 2., h / 2.]
 
-        use_cam = ProjectPoints(
-            f=cam[0] * np.ones(2),
-            rt=np.zeros(3),
-            t=np.zeros(3),
-            k=np.zeros(5),
-            c=cam[1:3])
+        use_cam = ProjectPoints(f=cam[0] * np.ones(2),
+                                rt=np.zeros(3),
+                                t=np.zeros(3),
+                                k=np.zeros(5),
+                                c=cam[1:3])
 
         if near is None:
             near = np.maximum(np.min(verts[:, 2]) - 25, 0.1)
         if far is None:
             far = np.maximum(np.max(verts[:, 2]) + 25, 25)
 
-        imtmp = render_model(
-            verts,
-            self.faces,
-            w,
-            h,
-            use_cam,
-            do_alpha=do_alpha,
-            img=img,
-            far=far,
-            near=near,
-            color_id=color_id)
+        imtmp = render_model(verts,
+                             self.faces,
+                             w,
+                             h,
+                             use_cam,
+                             do_alpha=do_alpha,
+                             img=img,
+                             far=far,
+                             near=near,
+                             color_id=color_id)
 
         return (imtmp * 255).astype('uint8')
 
@@ -102,15 +100,14 @@ class SMPLRenderer(object):
         center = verts.mean(axis=0)
         new_v = np.dot((verts - center), around) + center
 
-        return self.__call__(
-            new_v,
-            cam,
-            img=img,
-            do_alpha=do_alpha,
-            far=far,
-            near=near,
-            img_size=img_size,
-            color_id=color_id)
+        return self.__call__(new_v,
+                             cam,
+                             img=img,
+                             do_alpha=do_alpha,
+                             far=far,
+                             near=near,
+                             img_size=img_size,
+                             color_id=color_id)
 
 
 def _create_renderer(w=640,
@@ -151,31 +148,31 @@ def simple_renderer(rn,
     albedo = rn.vc
 
     # Construct Back Light (on back right corner)
-    rn.vc = LambertianPointLight(
-        f=rn.f,
-        v=rn.v,
-        num_verts=len(rn.v),
-        light_pos=_rotateY(np.array([-200, -100, -100]), yrot),
-        vc=albedo,
-        light_color=np.array([1, 1, 1]))
+    rn.vc = LambertianPointLight(f=rn.f,
+                                 v=rn.v,
+                                 num_verts=len(rn.v),
+                                 light_pos=_rotateY(
+                                     np.array([-200, -100, -100]), yrot),
+                                 vc=albedo,
+                                 light_color=np.array([1, 1, 1]))
 
     # Construct Left Light
-    rn.vc += LambertianPointLight(
-        f=rn.f,
-        v=rn.v,
-        num_verts=len(rn.v),
-        light_pos=_rotateY(np.array([800, 10, 300]), yrot),
-        vc=albedo,
-        light_color=np.array([1, 1, 1]))
+    rn.vc += LambertianPointLight(f=rn.f,
+                                  v=rn.v,
+                                  num_verts=len(rn.v),
+                                  light_pos=_rotateY(np.array([800, 10, 300]),
+                                                     yrot),
+                                  vc=albedo,
+                                  light_color=np.array([1, 1, 1]))
 
     # Construct Right Light
-    rn.vc += LambertianPointLight(
-        f=rn.f,
-        v=rn.v,
-        num_verts=len(rn.v),
-        light_pos=_rotateY(np.array([-500, 500, 1000]), yrot),
-        vc=albedo,
-        light_color=np.array([.7, .7, .7]))
+    rn.vc += LambertianPointLight(f=rn.f,
+                                  v=rn.v,
+                                  num_verts=len(rn.v),
+                                  light_pos=_rotateY(
+                                      np.array([-500, 500, 1000]), yrot),
+                                  vc=albedo,
+                                  light_color=np.array([.7, .7, .7]))
 
     return rn.r
 
@@ -186,8 +183,8 @@ def get_alpha(imtmp, bgval=1.):
 
     b_channel, g_channel, r_channel = cv2.split(imtmp)
 
-    im_RGBA = cv2.merge((b_channel, g_channel, r_channel, alpha.astype(
-        imtmp.dtype)))
+    im_RGBA = cv2.merge(
+        (b_channel, g_channel, r_channel, alpha.astype(imtmp.dtype)))
     return im_RGBA
 
 
@@ -210,8 +207,14 @@ def render_model(verts,
                  img=None,
                  do_alpha=False,
                  color_id=None):
-    rn = _create_renderer(
-        w=w, h=h, near=near, far=far, rt=cam.rt, t=cam.t, f=cam.f, c=cam.c)
+    rn = _create_renderer(w=w,
+                          h=h,
+                          near=near,
+                          far=far,
+                          rt=cam.rt,
+                          t=cam.t,
+                          f=cam.f,
+                          c=cam.c)
 
     # Uses img as background, otherwise white background.
     if img is not None:
@@ -250,12 +253,12 @@ def get_original(proc_param, verts, cam, joints):
     trans = np.hstack([cam_pos, tz])
     vert_shifted = verts + trans
 
-    start_pt = proc_param['start_pt']# - 0.5 * img_size
+    start_pt = proc_param['start_pt']  # - 0.5 * img_size
     final_principal_pt = (principal_pt + start_pt) * undo_scale
     cam_for_render = np.hstack(
         [np.mean(flength * undo_scale), final_principal_pt])
 
-    joints = ((joints + 1) * 0.5) * img_size    
+    joints = ((joints + 1) * 0.5) * img_size
     # This is in padded image.
     kp_original = (joints + proc_param['start_pt']) * undo_scale
     # Subtract padding from joints.
@@ -290,23 +293,23 @@ def render_original(frame,
     draw_bbox(skel_frame, bbox[-4:])
     skel_img_orig = draw_skeleton(skel_frame, kp_original, radius=radius)
     # Rendered image.
-    rend_img_orig = renderer(
-        vert_shifted, cam=cam_for_render, img=frame, color_id=ppl_id)
+    rend_img_orig = renderer(vert_shifted,
+                             cam=cam_for_render,
+                             img=frame,
+                             color_id=ppl_id)
     # Another viewpoint!
-    another_vp = renderer.rotated(
-        vert_shifted,
-        60,
-        cam=cam_for_render,
-        color_id=ppl_id,
-        img=other_vp,
-        axis='y')
-    another_vp2 = renderer.rotated(
-        vert_shifted,
-        -60,
-        cam=cam_for_render,
-        color_id=ppl_id,
-        img=other_vp2,
-        axis='x')
+    another_vp = renderer.rotated(vert_shifted,
+                                  60,
+                                  cam=cam_for_render,
+                                  color_id=ppl_id,
+                                  img=other_vp,
+                                  axis='y')
+    another_vp2 = renderer.rotated(vert_shifted,
+                                   -60,
+                                   cam=cam_for_render,
+                                   color_id=ppl_id,
+                                   img=other_vp2,
+                                   axis='x')
 
     # import matplotlib.pyplot as plt
     # plt.ion()
@@ -324,6 +327,7 @@ def render_original(frame,
 # --------------------
 # 2D draw functions
 # --------------------
+
 
 def draw_skeleton(input_image, joints, draw_edges=True, vis=None, radius=None):
     """
@@ -456,27 +460,33 @@ def draw_skeleton(input_image, joints, draw_edges=True, vis=None, radius=None):
         if vis is not None and vis[child] == 0:
             continue
         if draw_edges:
-            cv2.circle(image, (int(point[0]), int(point[1])), radius, tuple([int(colors['white'][x]) for x in range(3)]), -1)
-            cv2.circle(image, (int(point[0]), int(point[1])), radius - 1,
-                       tuple([int(colors[jcolors[child]][x]) for x in range(3)]), -1)
+            cv2.circle(image, (int(point[0]), int(point[1])), radius,
+                       tuple([int(colors['white'][x]) for x in range(3)]), -1)
+            cv2.circle(
+                image, (int(point[0]), int(point[1])), radius - 1,
+                tuple([int(colors[jcolors[child]][x]) for x in range(3)]), -1)
         else:
             # cv2.circle(image, (point[0], point[1]), 5, colors['white'], 1)
-            cv2.circle(image, (int(point[0]), int(point[1])), radius - 1,
-                       tuple([int(colors[jcolors[child]][x]) for x in range(3)]), 1)
+            cv2.circle(
+                image, (int(point[0]), int(point[1])), radius - 1,
+                tuple([int(colors[jcolors[child]][x]) for x in range(3)]), 1)
             # cv2.circle(image, (point[0], point[1]), 5, colors['gray'], -1)
         pa_id = parents[child]
         if draw_edges and pa_id >= 0:
             if vis is not None and vis[pa_id] == 0:
                 continue
             point_pa = joints[:, pa_id]
-            cv2.circle(image, (int(point_pa[0]), int(point_pa[1])), radius - 1,
-                       tuple([int(colors[jcolors[pa_id]][x]) for x in range(3)]), -1)
+            cv2.circle(
+                image, (int(point_pa[0]), int(point_pa[1])), radius - 1,
+                tuple([int(colors[jcolors[pa_id]][x]) for x in range(3)]), -1)
             if child not in ecolors.keys():
                 print('bad')
                 # import ipdb
                 # ipdb.set_trace()
-            cv2.line(image, (int(point[0]), int(point[1])), (int(point_pa[0]), int(point_pa[1])),
-                     tuple([int(colors[ecolors[child]][x]) for x in range(3)]), radius - 2)
+            cv2.line(image, (int(point[0]), int(point[1])),
+                     (int(point_pa[0]), int(point_pa[1])),
+                     tuple([int(colors[ecolors[child]][x]) for x in range(3)]),
+                     radius - 2)
 
     # Convert back in original dtype
     if input_is_float:
@@ -488,7 +498,12 @@ def draw_skeleton(input_image, joints, draw_edges=True, vis=None, radius=None):
     return image
 
 
-def draw_openpose_skeleton(input_image, joints, draw_edges=True, vis=None, radius=None, threshold=0.1):
+def draw_openpose_skeleton(input_image,
+                           joints,
+                           draw_edges=True,
+                           vis=None,
+                           radius=None,
+                           threshold=0.1):
     """
     Openpose:
     joints is 3 x 18. but if not will transpose it.
@@ -517,7 +532,7 @@ def draw_openpose_skeleton(input_image, joints, draw_edges=True, vis=None, radiu
     if joints.shape[0] != 2:
         joints = joints.T
     # Append a dummy 0 joint for the head.
-    joints = np.hstack((joints, np.zeros((3,1))))
+    joints = np.hstack((joints, np.zeros((3, 1))))
     # # Figure out the order:
     # for i in range(joints.shape[1]):
     #     import matplotlib.pyplot as plt
@@ -531,21 +546,11 @@ def draw_openpose_skeleton(input_image, joints, draw_edges=True, vis=None, radiu
     #     import ipdb; ipdb.set_trace()
 
     # This is what we want.
-    joint_names = ['R Ankle',
-                   'R Knee',
-                   'R Hip',
-                   'L Hip',
-                   'L Knee',
-                   'L Ankle',
-                   'R Wrist',
-                   'R Elbow',
-                   'R Shoulder',
-                   'L Shoulder',
-                   'L Elbow',
-                   'L Wrist',
-                   'Neck',
-                   'Head',
-                   'Nose', 'L Eye', 'R Eye', 'L Ear', 'R Ear']
+    joint_names = [
+        'R Ankle', 'R Knee', 'R Hip', 'L Hip', 'L Knee', 'L Ankle', 'R Wrist',
+        'R Elbow', 'R Shoulder', 'L Shoulder', 'L Elbow', 'L Wrist', 'Neck',
+        'Head', 'Nose', 'L Eye', 'R Eye', 'L Ear', 'R Ear'
+    ]
     # Order of open pose
     op_names = [
         'Nose',
@@ -577,7 +582,8 @@ def draw_openpose_skeleton(input_image, joints, draw_edges=True, vis=None, radiu
 
     # ordered_joints = np.vstack((ordered_joints[:2, :], vis))
 
-    image = draw_skeleton(input_image, ordered_joints[:2, :], draw_edges, vis, radius)
+    image = draw_skeleton(input_image, ordered_joints[:2, :], draw_edges, vis,
+                          radius)
     # import matplotlib.pyplot as plt
     # plt.ion()
     # plt.clf()

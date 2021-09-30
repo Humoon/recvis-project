@@ -10,8 +10,11 @@ import skimage.io as io
 import tensorflow as tf
 
 from tools import visualize, preprocess_image
+
+
 def del_all_flags(FLAGS):
     FLAGS.remove_flag_values(FLAGS.flag_values_dict())
+
 
 del_all_flags(tf.flags.FLAGS)
 import src.config
@@ -28,7 +31,8 @@ def main(img_path, json_path=None, viz=True, renderer=None, config=None):
     sess = tf.Session()
     model = RunModel(config, sess=sess)
 
-    cropped_imgs, params, og_imgs = preprocess_image(img_path, config.img_size, json_path)
+    cropped_imgs, params, og_imgs = preprocess_image(img_path, config.img_size,
+                                                     json_path)
     # Add batch dimension: 1 x D x D x 3
     input_imgs = [np.expand_dims(input_img, 0) for input_img in cropped_imgs]
 
@@ -37,15 +41,16 @@ def main(img_path, json_path=None, viz=True, renderer=None, config=None):
     # pose is 72D vector holding the rotation of 24 joints of SMPL in axis angle format
     # shape is 10D shape coefficients of SMPL
     for k in range(len(input_imgs)):
-        joints, verts, cams, joints3d, theta = model.predict(
-            input_imgs[k], get_theta=True)
+        joints, verts, cams, joints3d, theta = model.predict(input_imgs[k],
+                                                             get_theta=True)
         print(joints.shape)
         print(verts.shape)
         print(cams.shape)
         print(joints3d.shape)
         print(theta.shape)
         if viz:
-            visualize(og_imgs[k], params[k], joints[0], verts[0], cams[0],renderer)
+            visualize(og_imgs[k], params[k], joints[0], verts[0], cams[0],
+                      renderer)
 
 
 if __name__ == '__main__':

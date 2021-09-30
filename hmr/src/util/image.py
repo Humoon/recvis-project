@@ -22,8 +22,8 @@ def scale_and_crop(image, scale, center, img_size):
     center_scaled = np.round(center * scale_factors).astype(np.int)
 
     margin = int(img_size / 2)
-    image_pad = np.pad(
-        image_scaled, ((margin, ), (margin, ), (0, )), mode='edge')
+    image_pad = np.pad(image_scaled, ((margin, ), (margin, ), (0, )),
+                       mode='edge')
     center_pad = center_scaled + margin
     # figure out starting point
     start_pt = center_pad - margin
@@ -38,6 +38,7 @@ def scale_and_crop(image, scale, center, img_size):
     }
 
     return crop, proc_param
+
 
 def unprocess_image(im, v1=False):
     """

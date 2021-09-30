@@ -5,12 +5,10 @@ import vispy
 import vispy.scene
 from vispy.scene import visuals
 
-
 import tensorflow as tf
 import src.config
 import sys
 from absl import flags
-
 
 from src.util import image as img_util
 from src.RunModel import RunModel
@@ -28,12 +26,14 @@ def preprocess_image(img):
     # image center in (x,y)
     center = center[::-1]
 
-    crop, proc_param = img_util.scale_and_crop(img, scale, center, config.img_size)
+    crop, proc_param = img_util.scale_and_crop(img, scale, center,
+                                               config.img_size)
 
     # Normalize image to [-1, 1]
     crop = 2 * ((crop / 255.) - 0.5)
 
     return crop
+
 
 def main():
     # Video capture
@@ -60,11 +60,10 @@ def main():
     sess = tf.Session()
     model = RunModel(config, sess=sess)
 
-    while(True):
+    while (True):
 
         # Capture frame-by-frame
         ret, frame = cap.read()
-
 
         processed = preprocess_image(frame)
 
@@ -75,22 +74,24 @@ def main():
         # pose is 72D vector holding the rotation of 24 joints of SMPL in axis angle format
         # shape is 10D shape coefficients of SMPL
         start = datetime.datetime.now()
-        joints, verts, cams, joints3d, theta = model.predict(
-            input_img, get_theta=True)
+        joints, verts, cams, joints3d, theta = model.predict(input_img,
+                                                             get_theta=True)
         end = datetime.datetime.now()
-        delta = end -start
-        print("took:" , delta)
+        delta = end - start
+        print("took:", delta)
 
         # Display Camera frame
-        cv2.imshow('frame',frame)
-        cv2.imshow('processed',processed)
+        cv2.imshow('frame', frame)
+        cv2.imshow('processed', processed)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        
+
         # Display Plot
         # pos = np.random.normal(size=(100000, 3), scale=0.2)
-        scatter.set_data(verts[0], edge_color=None, face_color=(1, 1, 1, .5), size=5)
-
+        scatter.set_data(verts[0],
+                         edge_color=None,
+                         face_color=(1, 1, 1, .5),
+                         size=5)
 
     # When everything done, release the capture
     cap.release()

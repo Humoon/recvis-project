@@ -3,10 +3,11 @@ import numpy as np
 import skimage.io as io
 
 parentdir = os.path.dirname('hmr/')
-sys.path.insert(0,parentdir) 
+sys.path.insert(0, parentdir)
 from src.util import renderer as vis_util
 from src.util import image as img_util
 from src.util import openpose as op_util
+
 
 def visualize(img, proc_param, joints, verts, cam, renderer):
     """
@@ -17,14 +18,21 @@ def visualize(img, proc_param, joints, verts, cam, renderer):
 
     # Render results
     skel_img = vis_util.draw_skeleton(img, joints_orig)
-    rend_img_overlay = renderer(
-        vert_shifted, cam=cam_for_render, img=img, do_alpha=True)
-    rend_img = renderer(
-        vert_shifted, cam=cam_for_render, img_size=img.shape[:2])
-    rend_img_vp1 = renderer.rotated(
-        vert_shifted, 60, cam=cam_for_render, img_size=img.shape[:2])
-    rend_img_vp2 = renderer.rotated(
-        vert_shifted, -60, cam=cam_for_render, img_size=img.shape[:2])
+    rend_img_overlay = renderer(vert_shifted,
+                                cam=cam_for_render,
+                                img=img,
+                                do_alpha=True)
+    rend_img = renderer(vert_shifted,
+                        cam=cam_for_render,
+                        img_size=img.shape[:2])
+    rend_img_vp1 = renderer.rotated(vert_shifted,
+                                    60,
+                                    cam=cam_for_render,
+                                    img_size=img.shape[:2])
+    rend_img_vp2 = renderer.rotated(vert_shifted,
+                                    -60,
+                                    cam=cam_for_render,
+                                    img_size=img.shape[:2])
 
     import matplotlib.pyplot as plt
     # plt.ion()
@@ -67,7 +75,7 @@ def preprocess_image(img_path, target_size, json_path=None):
     for img_name in sorted(os.listdir(img_path)):
         if not img_name.endswith('.jpg'):
             continue
-        img = io.imread(os.path.join(img_path,img_name))
+        img = io.imread(os.path.join(img_path, img_name))
         if img.shape[2] == 4:
             img = img[:, :, :3]
 
@@ -81,10 +89,10 @@ def preprocess_image(img_path, target_size, json_path=None):
             # image center in (x,y)
             center = center[::-1]
         else:
-            scale, center = op_util.get_bbox(os.path.join(json_path,img_name))
+            scale, center = op_util.get_bbox(os.path.join(json_path, img_name))
 
         crop, proc_param = img_util.scale_and_crop(img, scale, center,
-                                                target_size)
+                                                   target_size)
 
         # Normalize image to [-1, 1]
         crop = 2 * ((crop / 255.) - 0.5)

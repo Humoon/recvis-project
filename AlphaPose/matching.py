@@ -8,17 +8,19 @@ from copy import deepcopy
 import numpy as np
 import torch
 from scipy.optimize import linear_sum_assignment
-sigmas = np.array([.26, .25, .25, .35, .35, .79, .79, .72, .72, .62, .62, 1.07, 1.07, .87, .87, .89, .89])
+
+sigmas = np.array([
+    .26, .25, .25, .35, .35, .79, .79, .72, .72, .62, .62, 1.07, 1.07, .87,
+    .87, .89, .89
+])
 
 
 def candidate_reselect(bboxes, bboxes_scores, pose_preds):
-
     '''
     Grouping
     '''
     # Group same keypointns together
     kp_groups = grouping(bboxes, bboxes_scores, pose_preds)
-
     '''
     Re-select
     '''
@@ -89,13 +91,16 @@ def candidate_reselect(bboxes, bboxes_scores, pose_preds):
         if torch.max(final_score).item() < 0.1:
             continue
 
-        if (1.5 ** 2 * (xmax - xmin) * (ymax - ymin) < 40 * 40):
+        if (1.5**2 * (xmax - xmin) * (ymax - ymin) < 40 * 40):
             continue
 
         final_result.append({
-            'keypoints': final_pose,
-            'kp_score': final_score,
-            'proposal_score': mean_score + max_score + person['bbox_score']
+            'keypoints':
+            final_pose,
+            'kp_score':
+            final_score,
+            'proposal_score':
+            mean_score + max_score + person['bbox_score']
         })
 
     return final_result
@@ -136,19 +141,16 @@ def grouping(bboxes, bboxes_scores, pose_preds):
 
             for g_id, g in kp_group.items():
                 x_c, y_c = kp_group[g_id]['group_center']
-
                 '''
                 Get Average Box Size
                 '''
                 group_area = kp_group[g_id]['group_area']
-                group_area = group_area[0] * group_area[1] / (group_area[2] ** 2)
-
+                group_area = group_area[0] * group_area[1] / (group_area[2]**2)
                 '''
                 Groupingn Criterion
                 '''
                 # Joint Group
-                dist = np.sqrt(
-                    ((x_c - x0) ** 2 + (y_c - y0) ** 2) / group_area)
+                dist = np.sqrt(((x_c - x0)**2 + (y_c - y0)**2) / group_area)
 
                 if dist <= 0.1 * sigmas[k]:  # Small Distance
                     if s0 >= 0.3:
@@ -156,12 +158,19 @@ def grouping(bboxes, bboxes_scores, pose_preds):
                         kp_group[g_id]['kp_list'][1] += y0 * s0
                         kp_group[g_id]['kp_list'][2] += s0
 
-                        kp_group[g_id]['group_area'][0] += (person['bbox'][2] - person['bbox'][0]) * person['human_score']
-                        kp_group[g_id]['group_area'][1] += (person['bbox'][3] - person['bbox'][1]) * person['human_score']
-                        kp_group[g_id]['group_area'][2] += person['human_score']
+                        kp_group[g_id]['group_area'][0] += (
+                            person['bbox'][2] -
+                            person['bbox'][0]) * person['human_score']
+                        kp_group[g_id]['group_area'][1] += (
+                            person['bbox'][3] -
+                            person['bbox'][1]) * person['human_score']
+                        kp_group[g_id]['group_area'][2] += person[
+                            'human_score']
 
-                        x_c = kp_group[g_id]['kp_list'][0] / kp_group[g_id]['kp_list'][2]
-                        y_c = kp_group[g_id]['kp_list'][1] / kp_group[g_id]['kp_list'][2]
+                        x_c = kp_group[g_id]['kp_list'][0] / kp_group[g_id][
+                            'kp_list'][2]
+                        y_c = kp_group[g_id]['kp_list'][1] / kp_group[g_id][
+                            'kp_list'][2]
                         kp_group[g_id]['group_center'] = (x_c, y_c)
 
                     pose_preds[n]['group_id'][k] = g_id
@@ -182,8 +191,8 @@ def grouping(bboxes, bboxes_scores, pose_preds):
                 ref_width = person['bbox'][2] - person['bbox'][0]
                 ref_height = person['bbox'][3] - person['bbox'][1]
                 ref_score = person['human_score']
-                kp_group[latest_id]['group_area'] = np.array((
-                    ref_width * ref_score, ref_height * ref_score, ref_score))
+                kp_group[latest_id]['group_area'] = np.array(
+                    (ref_width * ref_score, ref_height * ref_score, ref_score))
 
                 pose_preds[n]['group_id'][k] = latest_id
                 ids[k] = latest_id
@@ -206,7 +215,8 @@ def matching(pose_preds, matrix, kp_groups):
                 h_id = n
 
                 x, y, s = pose_preds[n][k][0]
-                if ((h_id, g_id) not in index[k]) and len(pose_preds[n][k]) > 1:
+                if ((h_id, g_id)
+                        not in index[k]) and len(pose_preds[n][k]) > 1:
                     pose_preds[n][k] = np.delete(pose_preds[n][k], 0, 0)
                 elif ((h_id, g_id) not in index[k]) and len(person[k]) == 1:
                     x, y, _ = pose_preds[n][k][0]

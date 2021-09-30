@@ -47,12 +47,12 @@ def parse_example_proto(example_serialized, has_3d=False):
         'image/y':
         tf.FixedLenFeature((1, 14), dtype=tf.float32),
         'image/face_pts':
-        tf.FixedLenFeature(
-            (1, 15),
-            dtype=tf.float32,
-            default_value=[
-                0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.
-            ]),
+        tf.FixedLenFeature((1, 15),
+                           dtype=tf.float32,
+                           default_value=[
+                               0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                               0., 0., 0.
+                           ]),
     }
     if has_3d:
         feature_map.update({
@@ -91,8 +91,8 @@ def parse_example_proto(example_serialized, has_3d=False):
     if has_3d:
         pose = tf.cast(features['mosh/pose'], dtype=tf.float32)
         shape = tf.cast(features['mosh/shape'], dtype=tf.float32)
-        gt3d = tf.reshape(
-            tf.cast(features['mosh/gt3d'], dtype=tf.float32), [14, 3])
+        gt3d = tf.reshape(tf.cast(features['mosh/gt3d'], dtype=tf.float32),
+                          [14, 3])
         has_smpl3d = tf.cast(features['meta/has_3d'], dtype=tf.bool)
         return image, image_size, label, center, fname, pose, shape, gt3d, has_smpl3d
     else:
@@ -123,8 +123,8 @@ def get_all_files(dataset_dir, datasets, split='train'):
             join(dataset_dir, 'tf_records_human36m_wjoints', split,
                  '*.tfrecord'))
     if 'mpi_inf_3dhp' in datasets:
-        data_dirs.append(
-            join(dataset_dir, 'mpi_inf_3dhp', split, '*.tfrecord'))
+        data_dirs.append(join(dataset_dir, 'mpi_inf_3dhp', split,
+                              '*.tfrecord'))
 
     all_files = []
     for data_dir in data_dirs:
@@ -178,18 +178,21 @@ def decode_jpeg(image_buffer, name=None):
 
 def jitter_center(center, trans_max):
     with tf.name_scope(None, 'jitter_center', values=[center, trans_max]):
-        rand_trans = tf.random_uniform(
-            [2, 1], minval=-trans_max, maxval=trans_max, dtype=tf.int32)
+        rand_trans = tf.random_uniform([2, 1],
+                                       minval=-trans_max,
+                                       maxval=trans_max,
+                                       dtype=tf.int32)
         return center + rand_trans
 
 
 def jitter_scale(image, image_size, keypoints, center, scale_range):
-    with tf.name_scope(None, 'jitter_scale', values=[image, image_size, keypoints]):
-        scale_factor = tf.random_uniform(
-            [1],
-            minval=scale_range[0],
-            maxval=scale_range[1],
-            dtype=tf.float32)
+    with tf.name_scope(None,
+                       'jitter_scale',
+                       values=[image, image_size, keypoints]):
+        scale_factor = tf.random_uniform([1],
+                                         minval=scale_range[0],
+                                         maxval=scale_range[1],
+                                         dtype=tf.float32)
         new_size = tf.to_int32(tf.to_float(image_size) * scale_factor)
         new_image = tf.image.resize_images(image, new_size)
 
@@ -202,8 +205,8 @@ def jitter_scale(image, image_size, keypoints, center, scale_range):
         cx = tf.cast(center[0], actual_factor.dtype) * actual_factor[1]
         cy = tf.cast(center[1], actual_factor.dtype) * actual_factor[0]
 
-        return new_image, tf.stack([x, y]), tf.cast(
-            tf.stack([cx, cy]), tf.int32)
+        return new_image, tf.stack([x, y]), tf.cast(tf.stack([cx, cy]),
+                                                    tf.int32)
 
 
 def pad_image_edge(image, margin):
@@ -214,14 +217,12 @@ def pad_image_edge(image, margin):
     tf doesn't have edge repeat mode,, so doing it with tile
     Assumes image has 3 channels!!
     """
-
     def repeat_col(col, num_repeat):
         # col is N x 3, ravels
         # i.e. to N*3 and repeats, then put it back to num_repeat x N x 3
         with tf.name_scope(None, 'repeat_col', values=[col, num_repeat]):
-            return tf.reshape(
-                tf.tile(tf.reshape(col, [-1]), [num_repeat]),
-                [num_repeat, -1, 3])
+            return tf.reshape(tf.tile(tf.reshape(col, [-1]), [num_repeat]),
+                              [num_repeat, -1, 3])
 
     with tf.name_scope(None, 'pad_image_edge', values=[image, margin]):
         top = repeat_col(image[0, :, :], margin)
@@ -230,8 +231,8 @@ def pad_image_edge(image, margin):
         image = tf.concat([top, image, bottom], 0)
         # Left requires another permute bc how img[:, 0, :]->(h, 3)
         left = tf.transpose(repeat_col(image[:, 0, :], margin), perm=[1, 0, 2])
-        right = tf.transpose(
-            repeat_col(image[:, -1, :], margin), perm=[1, 0, 2])
+        right = tf.transpose(repeat_col(image[:, -1, :], margin),
+                             perm=[1, 0, 2])
         image = tf.concat([left, image, right], 1)
 
         return image
@@ -247,8 +248,8 @@ def random_flip(image, kp, pose=None, gt3d=None):
 
     if pose is not None:
         new_image, new_kp, new_pose, new_gt3d = tf.cond(
-            mirror_cond, lambda: flip_image(image, kp, pose, gt3d),
-            lambda: (image, kp, pose, gt3d))
+            mirror_cond, lambda: flip_image(image, kp, pose, gt3d), lambda:
+            (image, kp, pose, gt3d))
         return new_image, new_kp, new_pose, new_gt3d
     else:
         new_image, new_kp = tf.cond(mirror_cond, lambda: flip_image(image, kp),
@@ -315,15 +316,13 @@ def reflect_pose(pose):
         ], tf.int32)
 
         # sign_flip = np.tile([1, -1, -1], (24)) (with the first 3 kept)
-        sign_flip = tf.constant(
-            [
-                1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1,
-                -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1,
-                -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1,
-                1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1,
-                -1, 1, -1, -1
-            ],
-            dtype=pose.dtype)
+        sign_flip = tf.constant([
+            1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1,
+            1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1,
+            1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1,
+            1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1
+        ],
+                                dtype=pose.dtype)
 
         new_pose = tf.gather(pose, swap_inds) * sign_flip
 

@@ -16,12 +16,13 @@ import scipy.signal as signal
 import deepdish as dd
 
 import tensorflow as tf
+
 parentdir = os.path.dirname('hmr/')
-sys.path.insert(0,parentdir) 
+sys.path.insert(0, parentdir)
 from src.util.renderer import draw_openpose_skeleton
 
 parentdir = os.path.dirname('AlphaPose/')
-sys.path.insert(0,parentdir) 
+sys.path.insert(0, parentdir)
 from call_for_hmr import call_alphapose
 
 # Threshold for visible points
@@ -35,7 +36,7 @@ IOU_THR = 0.05
 # If person hasn't appeared for this many frames, drop it.
 OCCL_THR = 30
 # Bbox traj must be longer than 50% of duration (duration -> max length any body was seen)
-FREQ_THR = .1 #.3
+FREQ_THR = .1  #.3
 # If median bbox area is less than this% of image area, kill it.
 SIZE_THR = .23
 # If avg score of the trajectory is < than this, kill it.
@@ -60,8 +61,8 @@ def main(unused_argv, vid_dir='data/vid', out_dir='out'):
         vid_name = basename(vid_path)[:-4]
         out_here = join(out_dir, vid_name)
 
-        save_vid_path = join(join(out_dir,vid_name),'frames')
-        os.makedirs(save_vid_path,exist_ok=True)
+        save_vid_path = join(join(out_dir, vid_name), 'frames')
+        os.makedirs(save_vid_path, exist_ok=True)
         from PIL import Image
         for i in range(len(imgs)):
             im = Image.fromarray(imgs[i])
@@ -80,8 +81,9 @@ def main(unused_argv, vid_dir='data/vid', out_dir='out'):
                 digest_openpose(out_here, vid_path, bbox_path)
         # else:
         if not exists(bbox_path):
-            call_alphapose(save_vid_path,out_here,format='open',batchSize=1)
+            call_alphapose(save_vid_path, out_here, format='open', batchSize=1)
             digest_openpose(out_here, vid_path, bbox_path)
+
 
 def digest_openpose(json_dir, vid_path, bbox_path):
     print('reading %s' % vid_path)
@@ -163,13 +165,13 @@ def clean_detections(all_kps, vid_path, vis=False):
             iou_scores_copy = np.copy(iou_scores)
             while not np.all(pid_is_matched) and not np.all(
                     box_is_visited) and not np.all(iou_scores == -1):
-                row, col = np.unravel_index(iou_scores.argmax(), (num_persons,
-                                                                  num_bboxes))
+                row, col = np.unravel_index(iou_scores.argmax(),
+                                            (num_persons, num_bboxes))
                 box_is_visited[col] = True
 
                 # Add this bbox to this person if enough overlap.
-                if iou_scores[row,
-                              col] > IOU_THR and not pid_is_matched[row] and not box_is_matched[col]:
+                if iou_scores[row, col] > IOU_THR and not pid_is_matched[
+                        row] and not box_is_matched[col]:
                     persons[row].append((i, bboxes[col], valid_kps[col]))
                     pid_is_matched[row] = True
                     box_is_matched[col] = True
@@ -185,7 +187,8 @@ def clean_detections(all_kps, vid_path, vis=False):
                     ipdb.set_trace()
             unmatched_boxes = bboxes[np.logical_not(box_is_matched)]
             unmatched_kps = valid_kps[np.logical_not(box_is_matched)]
-            for new_j, (bbox, kp_here) in enumerate(zip(unmatched_boxes, unmatched_kps)):
+            for new_j, (bbox, kp_here) in enumerate(
+                    zip(unmatched_boxes, unmatched_kps)):
                 persons[num_persons + new_j] = [(i, bbox, kp_here)]
 
         if vis and i % 20 == 0:
@@ -216,7 +219,8 @@ def clean_detections(all_kps, vid_path, vis=False):
         med_score = np.median([bbox[3] for (_, bbox, _) in persons[p_id]])
         freq = len(persons[p_id]) / duration
         median_bbox_area = np.median(
-            [bbox[6] * bbox[7] for (_, bbox, _) in persons[p_id]]) / float(img_area)
+            [bbox[6] * bbox[7]
+             for (_, bbox, _) in persons[p_id]]) / float(img_area)
         # print('freq %.2f, score %.2f, size %.2f' % (freq, med_score, median_bbox_area))
         if freq < FREQ_THR:
             print('Rejecting %d bc too suprious: %.2f' % (p_id, freq))
@@ -232,7 +236,8 @@ def clean_detections(all_kps, vid_path, vis=False):
             print('Rejecting %d bc not confident: %.2f' % (p_id, med_score))
             del persons[p_id]
             continue
-        print('%d survived with: freq %.2f, score %.2f, size %.2f' % (p_id, freq, med_score, median_bbox_area))
+        print('%d survived with: freq %.2f, score %.2f, size %.2f' %
+              (p_id, freq, med_score, median_bbox_area))
     print('Total # of ppl trajectories: %d' % len(persons.keys()))
     if len(persons.keys()) == 0:
         return {}
@@ -248,7 +253,7 @@ def clean_detections(all_kps, vid_path, vis=False):
             else:
                 per_frame[time] = [(p_id, bbox, kp_here)]
     # Now show.
-    if vis:#True:
+    if vis:  #True:
         if not vis:
             frames = read_frames(vid_path)
         for i, frame in enumerate(frames):
@@ -277,7 +282,6 @@ def clean_detections(all_kps, vid_path, vis=False):
                     ax.add_patch(rect)
                     plt.text(bbox[4], bbox[5], 'pid: %d' % p_id)
             plt.pause(1e-3)
-
 
     return per_frame_smooth
 
@@ -310,12 +314,15 @@ def smooth_detections(persons):
         bbox_params = bboxes_filled[:, :3]
         bbox_scores = bboxes_filled[:, 3]
         # Filter the first 3 parameters (cx, cy, s)
-        smoothed = np.array([signal.medfilt(param, 11) for param in bbox_params.T]).T
+        smoothed = np.array(
+            [signal.medfilt(param, 11) for param in bbox_params.T]).T
         from scipy.ndimage.filters import gaussian_filter1d
-        smoothed2 = np.array([gaussian_filter1d(traj, 3) for traj in smoothed.T]).T
+        smoothed2 = np.array(
+            [gaussian_filter1d(traj, 3) for traj in smoothed.T]).T
 
         # Convert the smoothed parameters into bboxes.
-        smoothed_bboxes = np.vstack([params_to_bboxes(cx, cy, sc) for (cx, cy, sc) in smoothed2])
+        smoothed_bboxes = np.vstack(
+            [params_to_bboxes(cx, cy, sc) for (cx, cy, sc) in smoothed2])
         # Cut back the boxes until confidence is high.
         last_ind = len(bbox_scores) - 1
         while bbox_scores[last_ind] < END_BOX_CONF:
@@ -323,7 +330,10 @@ def smooth_detections(persons):
                 break
             last_ind -= 1
         # Make it into 8 dim (cx, cy, sc, score, x, y, h, w) again,,
-        final_bboxes = np.hstack([smoothed2[:last_ind], bbox_scores.reshape(-1, 1)[:last_ind], smoothed_bboxes[:last_ind]])
+        final_bboxes = np.hstack([
+            smoothed2[:last_ind],
+            bbox_scores.reshape(-1, 1)[:last_ind], smoothed_bboxes[:last_ind]
+        ])
         final_kps = kps_filled[:last_ind]
 
         # Conver this into dict of time.
@@ -363,26 +373,24 @@ def fill_in_bboxes(bboxes, start_frame, end_frame):
             # but make sure that kp score is all 0
             fill_this[1][:, 2] = 0.
             bboxes_filled.append(fill_this)
-                        
 
     return bboxes_filled
-                
-        
+
+
 def get_rect(bbox0, linestyle='solid', ecolor='red'):
     """
     for drawing..
     bbox0 is (cx, cy, scale, score, x, y, h, w)
     """
     bbox = bbox0[-4:]
-    return patches.Rectangle(
-        (bbox[0], bbox[1]),
-        bbox[2],
-        bbox[3],
-        linewidth=2,
-        edgecolor=ecolor,
-        linestyle=linestyle,
-        fill=False,
-        clip_on=False)
+    return patches.Rectangle((bbox[0], bbox[1]),
+                             bbox[2],
+                             bbox[3],
+                             linewidth=2,
+                             edgecolor=ecolor,
+                             linestyle=linestyle,
+                             fill=False,
+                             clip_on=False)
 
 
 def compute_iou(bbox0, bboxes0):
@@ -391,7 +399,6 @@ def compute_iou(bbox0, bboxes0):
     last 4 bit is the standard bbox.
     For this ignore score.
     """
-
     def iou(boxA, boxB):
         boxA_area = boxA[2] * boxA[3]
         boxB_area = boxB[2] * boxB[3]
@@ -419,6 +426,7 @@ def read_json(json_path):
         kps.append(kp)
     return kps
 
+
 def nonmaxsupp(bboxes0, valid_kps0):
     """
     bboxes are (cx, cy, scale, score, x, y, h, w)
@@ -435,12 +443,12 @@ def nonmaxsupp(bboxes0, valid_kps0):
     x2 = x1 + bboxes[:, 2] - 1
     y2 = x2 + bboxes[:, 3] - 1
     area = bboxes[:, 2] * bboxes[:, 3]
-    
+
     # Small first,,
     idxs = np.argsort(scores)
 
     while len(idxs) > 0:
-        last = len(idxs)-1
+        last = len(idxs) - 1
         i = idxs[last]
         pick.append(i)
         # compute iou
@@ -455,10 +463,12 @@ def nonmaxsupp(bboxes0, valid_kps0):
         overlap = (w * h) / area[idxs[:last]]
 
         # delete all indexes from the index list that have
-        idxs = np.delete(idxs, np.concatenate(([last], np.where(overlap > NMS_THR)[0])))
+        idxs = np.delete(
+            idxs, np.concatenate(([last], np.where(overlap > NMS_THR)[0])))
 
     return bboxes0[pick], valid_kps0[pick]
-                
+
+
 def get_bbox(kp):
     vis = kp[:, 2] > VIS_THR
     if np.sum(vis) < NUM_VIS_THR:
@@ -469,7 +479,8 @@ def get_bbox(kp):
     person_height = np.linalg.norm(max_pt - min_pt)
     if person_height == 0:
         print('bad!')
-        import ipdb; ipdb.set_trace()
+        import ipdb
+        ipdb.set_trace()
     center = (min_pt + max_pt) / 2.
     scale = 150. / person_height
 

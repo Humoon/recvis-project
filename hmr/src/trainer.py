@@ -147,17 +147,15 @@ class HMRTrainer(object):
 
         self.saver = tf.train.Saver(keep_checkpoint_every_n_hours=5)
         self.summary_writer = tf.summary.FileWriter(self.model_dir)
-        self.sv = tf.train.Supervisor(
-            logdir=self.model_dir,
-            global_step=self.global_step,
-            saver=self.saver,
-            summary_writer=self.summary_writer,
-            init_fn=init_fn)
+        self.sv = tf.train.Supervisor(logdir=self.model_dir,
+                                      global_step=self.global_step,
+                                      saver=self.saver,
+                                      summary_writer=self.summary_writer,
+                                      init_fn=init_fn)
         gpu_options = tf.GPUOptions(allow_growth=True)
-        self.sess_config = tf.ConfigProto(
-            allow_soft_placement=False,
-            log_device_placement=False,
-            gpu_options=gpu_options)
+        self.sess_config = tf.ConfigProto(allow_soft_placement=False,
+                                          log_device_placement=False,
+                                          gpu_options=gpu_options)
 
     def use_pretrained(self):
         """
@@ -167,8 +165,8 @@ class HMRTrainer(object):
           3. model_dir is NOT empty, meaning we're picking up from previous
              so fuck this pretrained model.
         """
-        if ('resnet' in self.model_type) and (self.pretrained_model_path is
-                                              not None):
+        if ('resnet' in self.model_type) and (self.pretrained_model_path
+                                              is not None):
             # Check is model_dir is empty
             import os
             if os.listdir(self.model_dir) == []:
@@ -180,8 +178,8 @@ class HMRTrainer(object):
         mean = np.zeros((1, self.total_params))
         # Initialize scale at 0.9
         mean[0, 0] = 0.9
-        mean_path = join(
-            dirname(self.smpl_model_path), 'neutral_smpl_mean_params.h5')
+        mean_path = join(dirname(self.smpl_model_path),
+                         'neutral_smpl_mean_params.h5')
         mean_vals = dd.io.load(mean_path)
 
         mean_pose = mean_vals['pose']
@@ -194,8 +192,10 @@ class HMRTrainer(object):
 
         mean[0, 3:] = np.hstack((mean_pose, mean_shape))
         mean = tf.constant(mean, tf.float32)
-        self.mean_var = tf.Variable(
-            mean, name="mean_param", dtype=tf.float32, trainable=True)
+        self.mean_var = tf.Variable(mean,
+                                    name="mean_param",
+                                    dtype=tf.float32,
+                                    trainable=True)
         self.E_var.append(self.mean_var)
         init_mean = tf.tile(self.mean_var, [self.batch_size, 1])
         return init_mean
@@ -203,8 +203,9 @@ class HMRTrainer(object):
     def build_model(self):
         img_enc_fn, threed_enc_fn = get_encoder_fn_separate(self.model_type)
         # Extract image features.
-        self.img_feat, self.E_var = img_enc_fn(
-            self.image_loader, weight_decay=self.e_wd, reuse=False)
+        self.img_feat, self.E_var = img_enc_fn(self.image_loader,
+                                               weight_decay=self.e_wd,
+                                               reuse=False)
 
         loss_kps = []
         if self.use_3d_label:
@@ -230,13 +231,12 @@ class HMRTrainer(object):
 
             if i == 0:
                 delta_theta, threeD_var = threed_enc_fn(
-                    state,
-                    num_output=self.total_params,
-                    reuse=False)
+                    state, num_output=self.total_params, reuse=False)
                 self.E_var.extend(threeD_var)
             else:
-                delta_theta, _ = threed_enc_fn(
-                    state, num_output=self.total_params, reuse=True)
+                delta_theta, _ = threed_enc_fn(state,
+                                               num_output=self.total_params,
+                                               reuse=True)
 
             # Compute new theta
             theta_here = theta_prev + delta_theta
@@ -246,11 +246,12 @@ class HMRTrainer(object):
             shapes = theta_here[:, (self.num_cam + self.num_theta):]
             # Rs_wglobal is Nx24x3x3 rotation matrices of poses
             verts, Js, pred_Rs = self.smpl(shapes, poses, get_skin=True)
-            pred_kp = batch_orth_proj_idrot(
-                Js, cams, name='proj2d_stage%d' % i)
+            pred_kp = batch_orth_proj_idrot(Js,
+                                            cams,
+                                            name='proj2d_stage%d' % i)
             # --- Compute losses:
-            loss_kps.append(self.e_loss_weight * self.keypoint_loss(
-                self.kp_loader, pred_kp))
+            loss_kps.append(self.e_loss_weight *
+                            self.keypoint_loss(self.kp_loader, pred_kp))
             pred_Rs = tf.reshape(pred_Rs, [-1, 24, 9])
             if self.use_3d_label:
                 loss_poseshape, loss_joints = self.get_3d_loss(
@@ -291,8 +292,8 @@ class HMRTrainer(object):
 
         if not self.encoder_only:
             with tf.name_scope("gather_d_loss"):
-                self.d_loss = self.d_loss_weight * (
-                    self.d_loss_real + self.d_loss_fake)
+                self.d_loss = self.d_loss_weight * (self.d_loss_real +
+                                                    self.d_loss_fake)
 
         # For visualizations, only save selected few into:
         # B x T x ...
@@ -314,8 +315,9 @@ class HMRTrainer(object):
         d_optimizer = self.optimizer(self.d_lr)
         e_optimizer = self.optimizer(self.e_lr)
 
-        self.e_opt = e_optimizer.minimize(
-            self.e_loss, global_step=self.global_step, var_list=self.E_var)
+        self.e_opt = e_optimizer.minimize(self.e_loss,
+                                          global_step=self.global_step,
+                                          var_list=self.E_var)
         if not self.encoder_only:
             self.d_opt = d_optimizer.minimize(self.d_loss, var_list=self.D_var)
 
@@ -375,8 +377,8 @@ class HMRTrainer(object):
             summary_occ.append(
                 tf.summary.histogram("d_out/beta", self.d_out[:, 24]))
 
-            self.summary_op_occ = tf.summary.merge(
-                summary_occ, collections=['occasional'])
+            self.summary_op_occ = tf.summary.merge(summary_occ,
+                                                   collections=['occasional'])
         self.summary_op_always = tf.summary.merge(always_report)
 
     def setup_discriminator(self, fake_rotations, fake_shapes):
@@ -387,16 +389,17 @@ class HMRTrainer(object):
         # Ignoring global rotation. N x 23*9
         # The # of real rotation is B*num_stage so it's balanced.
         real_rotations = real_rotations[:, 1:, :]
-        all_fake_rotations = tf.reshape(
-            tf.concat(fake_rotations, 0),
-            [self.batch_size * self.num_stage, -1, 9])
-        comb_rotations = tf.concat(
-            [real_rotations, all_fake_rotations], 0, name="combined_pose")
+        all_fake_rotations = tf.reshape(tf.concat(
+            fake_rotations, 0), [self.batch_size * self.num_stage, -1, 9])
+        comb_rotations = tf.concat([real_rotations, all_fake_rotations],
+                                   0,
+                                   name="combined_pose")
 
         comb_rotations = tf.expand_dims(comb_rotations, 2)
         all_fake_shapes = tf.concat(fake_shapes, 0)
-        comb_shapes = tf.concat(
-            [self.shape_loader, all_fake_shapes], 0, name="combined_shape")
+        comb_shapes = tf.concat([self.shape_loader, all_fake_shapes],
+                                0,
+                                name="combined_shape")
 
         disc_input = {
             'weight_decay': self.d_wd,
@@ -473,8 +476,10 @@ class HMRTrainer(object):
         # Draw skeleton
         gt_joint = ((gt_kp[:, :2] + 1) * 0.5) * self.img_size
         pred_joint = ((pred_kp + 1) * 0.5) * self.img_size
-        img_with_gt = vis_util.draw_skeleton(
-            input_img, gt_joint, draw_edges=False, vis=gt_vis)
+        img_with_gt = vis_util.draw_skeleton(input_img,
+                                             gt_joint,
+                                             draw_edges=False,
+                                             vis=gt_vis)
         skel_img = vis_util.draw_skeleton(img_with_gt, pred_joint)
 
         combined = np.hstack([skel_img, rend_img / 255.])
@@ -516,22 +521,20 @@ class HMRTrainer(object):
 
             sio = StringIO()
             plt.imsave(sio, combined, format='png')
-            vis_sum = tf.Summary.Image(
-                encoded_image_string=sio.getvalue(),
-                height=combined.shape[0],
-                width=combined.shape[1])
+            vis_sum = tf.Summary.Image(encoded_image_string=sio.getvalue(),
+                                       height=combined.shape[0],
+                                       width=combined.shape[1])
             img_summaries.append(
                 tf.Summary.Value(tag="vis_images/%d" % img_id, image=vis_sum))
 
         img_summary = tf.Summary(value=img_summaries)
-        self.summary_writer.add_summary(
-            img_summary, global_step=result['step'])
+        self.summary_writer.add_summary(img_summary,
+                                        global_step=result['step'])
 
     def train(self):
         # For rendering!
         self.renderer = vis_util.SMPLRenderer(
-            img_size=self.img_size,
-            face_path=self.config.smpl_face_path)
+            img_size=self.img_size, face_path=self.config.smpl_face_path)
 
         step = 0
 
@@ -567,17 +570,15 @@ class HMRTrainer(object):
                         "cam": self.all_pred_cams,
                     })
                     if not self.encoder_only:
-                        fetch_dict.update({
-                            "summary_occasional":
-                            self.summary_op_occ
-                        })
+                        fetch_dict.update(
+                            {"summary_occasional": self.summary_op_occ})
 
                 t0 = time()
                 result = sess.run(fetch_dict)
                 t1 = time()
 
-                self.summary_writer.add_summary(
-                    result['summary'], global_step=result['step'])
+                self.summary_writer.add_summary(result['summary'],
+                                                global_step=result['step'])
 
                 e_loss = result['e_loss']
                 step = result['step']

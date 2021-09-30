@@ -124,8 +124,8 @@ def preprocess_image(frame, bbox, op_kp, img_size, vis_thresh):
     kp[:, 1] *= scale_factors[1]
 
     margin = int(img_size / 2)
-    image_pad = np.pad(
-        image_scaled, ((margin, ), (margin, ), (0, )), mode='edge')
+    image_pad = np.pad(image_scaled, ((margin, ), (margin, ), (0, )),
+                       mode='edge')
     center_pad = center_scaled + margin
     # figure out starting point
     start_pt = center_pad - margin

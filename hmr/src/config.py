@@ -65,23 +65,22 @@ DATA_DIR = '/scratch1/projects/tf_datasets/'
 
 flags.DEFINE_string('data_dir', DATA_DIR, 'Where to save training models')
 flags.DEFINE_string('log_dir', 'logs', 'Where to save training models')
-flags.DEFINE_string('model_dir', None, 'Where model will be saved -- filled automatically')
-flags.DEFINE_integer('log_img_step', 100, 'How often to visualize img during training')
+flags.DEFINE_string('model_dir', None,
+                    'Where model will be saved -- filled automatically')
+flags.DEFINE_integer('log_img_step', 100,
+                     'How often to visualize img during training')
 flags.DEFINE_integer('epoch', 100, '# of epochs to train')
 
 flags.DEFINE_list('datasets', ['lsp', 'lsp_ext', 'mpii', 'coco'],
-                          'datasets to use for training')
+                  'datasets to use for training')
 flags.DEFINE_list('mocap_datasets', ['CMU', 'H3.6', 'jointLim'],
                   'datasets to use for adversarial prior training')
 
 # Model config
-flags.DEFINE_boolean(
-    'encoder_only', False,
-    'if set, no adversarial prior is trained = monsters')
+flags.DEFINE_boolean('encoder_only', False,
+                     'if set, no adversarial prior is trained = monsters')
 
-flags.DEFINE_boolean(
-    'use_3d_label', True,
-    'Uses 3D labels if on.')
+flags.DEFINE_boolean('use_3d_label', True, 'Uses 3D labels if on.')
 
 # Hyper parameters:
 flags.DEFINE_float('e_lr', 0.001, 'Encoder learning rate')
@@ -91,7 +90,6 @@ flags.DEFINE_float('d_wd', 0.0001, 'Adversarial prior weight decay')
 
 flags.DEFINE_float('e_loss_weight', 60, 'weight on E_kp losses')
 flags.DEFINE_float('d_loss_weight', 1, 'weight on discriminator')
-
 
 flags.DEFINE_float('e_3d_weight', 1, 'weight on E_3d')
 
@@ -106,12 +104,18 @@ flags.DEFINE_boolean('viz', False, 'visualize refinement')
 flags.DEFINE_float('shape_loss_weight', .5, 'weight on shape variance')
 flags.DEFINE_float('joint_smooth_weight', 25, 'weight on joint smoothness')
 flags.DEFINE_float('camera_smooth_weight', 1., 'weight on camera smoothness')
-flags.DEFINE_float('init_pose_loss_weight', 100., 'weight on how much to stick to initial pose')
+flags.DEFINE_float('init_pose_loss_weight', 100.,
+                   'weight on how much to stick to initial pose')
 
 # Other settings:
 flags.DEFINE_integer('num_refine', 50, 'number of iterations to optimize.')
-flags.DEFINE_boolean('use_weighted_init_pose', True, 'weights init_pose_loss according to initial closeness with openpose.. ')
-flags.DEFINE_boolean('refine_inpose', False, 'if true optimizes wrt the pose space as opposed to the latent feature space. ')
+flags.DEFINE_boolean(
+    'use_weighted_init_pose', True,
+    'weights init_pose_loss according to initial closeness with openpose.. ')
+flags.DEFINE_boolean(
+    'refine_inpose', False,
+    'if true optimizes wrt the pose space as opposed to the latent feature space. '
+)
 
 
 def get_config():
@@ -147,9 +151,8 @@ def prepare_dirs(config, prefix=['HMR']):
         dict_here = config.__dict__
         ignore_keys = ['load_path', 'log_img_step', 'pretrained_model_path']
         diff_keys = [
-            k for k in dict_here
-            if k not in ignore_keys and k in prev_config.keys()
-            and prev_config[k] != dict_here[k]
+            k for k in dict_here if k not in ignore_keys
+            and k in prev_config.keys() and prev_config[k] != dict_here[k]
         ]
 
         for k in diff_keys:

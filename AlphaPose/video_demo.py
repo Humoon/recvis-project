@@ -33,20 +33,20 @@ if __name__ == "__main__":
     mode = args.mode
     if not os.path.exists(args.outputpath):
         os.mkdir(args.outputpath)
-    
+
     if not len(videofile):
         raise IOError('Error: must contain --video')
 
     # Load input video
     data_loader = VideoLoader(videofile, batchSize=args.detbatch).start()
-    (fourcc,fps,frameSize) = data_loader.videoinfo()
+    (fourcc, fps, frameSize) = data_loader.videoinfo()
 
     # Load detection loader
     print('Loading YOLO model..')
     sys.stdout.flush()
     det_loader = DetectionLoader(data_loader, batchSize=args.detbatch).start()
     det_processor = DetectionProcessor(det_loader).start()
-    
+
     # Load pose model
     pose_dataset = Mscoco()
     if args.fast_inference:
@@ -56,32 +56,34 @@ if __name__ == "__main__":
     pose_model.cuda()
     pose_model.eval()
 
-    runtime_profile = {
-        'dt': [],
-        'pt': [],
-        'pn': []
-    }
+    runtime_profile = {'dt': [], 'pt': [], 'pn': []}
 
     # Data writer
-    save_path = os.path.join(args.outputpath, 'AlphaPose_'+ntpath.basename(videofile).split('.')[0]+'.avi')
-    writer = DataWriter(args.save_video, save_path, cv2.VideoWriter_fourcc(*'XVID'), fps, frameSize).start()
+    save_path = os.path.join(
+        args.outputpath,
+        'AlphaPose_' + ntpath.basename(videofile).split('.')[0] + '.avi')
+    writer = DataWriter(args.save_video, save_path,
+                        cv2.VideoWriter_fourcc(*'XVID'), fps,
+                        frameSize).start()
 
-    im_names_desc =  tqdm(range(data_loader.length()))
+    im_names_desc = tqdm(range(data_loader.length()))
     batchSize = args.posebatch
     for i in im_names_desc:
         start_time = getTime()
         with torch.no_grad():
-            (inps, orig_img, im_name, boxes, scores, pt1, pt2) = det_processor.read()
+            (inps, orig_img, im_name, boxes, scores, pt1,
+             pt2) = det_processor.read()
             if orig_img is None:
                 break
             if boxes is None or boxes.nelement() == 0:
-                writer.save(None, None, None, None, None, orig_img, im_name.split('/')[-1])
+                writer.save(None, None, None, None, None, orig_img,
+                            im_name.split('/')[-1])
                 continue
 
             ckpt_time, det_time = getTime(start_time)
             runtime_profile['dt'].append(det_time)
             # Pose Estimation
-            
+
             datalen = inps.size(0)
             leftover = 0
             if (datalen) % batchSize:
@@ -89,7 +91,8 @@ if __name__ == "__main__":
             num_batches = datalen // batchSize + leftover
             hm = []
             for j in range(num_batches):
-                inps_j = inps[j*batchSize:min((j +  1)*batchSize, datalen)].cuda()
+                inps_j = inps[j * batchSize:min((j + 1) *
+                                                batchSize, datalen)].cuda()
                 hm_j = pose_model(inps_j)
                 hm.append(hm_j)
             hm = torch.cat(hm)
@@ -97,7 +100,8 @@ if __name__ == "__main__":
             runtime_profile['pt'].append(pose_time)
 
             hm = hm.cpu().data
-            writer.save(boxes, scores, hm, pt1, pt2, orig_img, im_name.split('/')[-1])
+            writer.save(boxes, scores, hm, pt1, pt2, orig_img,
+                        im_name.split('/')[-1])
 
             ckpt_time, post_time = getTime(ckpt_time)
             runtime_profile['pn'].append(post_time)
@@ -105,15 +109,20 @@ if __name__ == "__main__":
         if args.profile:
             # TQDM
             im_names_desc.set_description(
-            'det time: {dt:.3f} | pose time: {pt:.2f} | post processing: {pn:.4f}'.format(
-                dt=np.mean(runtime_profile['dt']), pt=np.mean(runtime_profile['pt']), pn=np.mean(runtime_profile['pn']))
-            )
+                'det time: {dt:.3f} | pose time: {pt:.2f} | post processing: {pn:.4f}'
+                .format(dt=np.mean(runtime_profile['dt']),
+                        pt=np.mean(runtime_profile['pt']),
+                        pn=np.mean(runtime_profile['pn'])))
 
     print('===========================> Finish Model Running.')
     if (args.save_img or args.save_video) and not args.vis_fast:
-        print('===========================> Rendering remaining images in the queue...')
-        print('===========================> If this step takes too long, you can enable the --vis_fast flag to use fast rendering (real-time).')
-    while(writer.running()):
+        print(
+            '===========================> Rendering remaining images in the queue...'
+        )
+        print(
+            '===========================> If this step takes too long, you can enable the --vis_fast flag to use fast rendering (real-time).'
+        )
+    while (writer.running()):
         pass
     writer.stop()
     final_result = writer.results()

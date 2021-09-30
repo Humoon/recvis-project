@@ -14,6 +14,7 @@ from .tf_smpl import projection as proj_util
 from .tf_smpl.batch_smpl import SMPL
 from .models import get_encoder_fn_separate
 
+
 class RunModel(object):
     def __init__(self, config, sess=None):
         """
@@ -22,7 +23,7 @@ class RunModel(object):
         """
         self.config = config
         self.load_path = config.load_path
-        
+
         # Config + path
         if not config.load_path:
             raise Exception(
@@ -39,7 +40,7 @@ class RunModel(object):
 
         self.data_format = config.data_format
         self.smpl_model_path = config.smpl_model_path
-        
+
         input_size = (self.batch_size, self.img_size, self.img_size, 3)
         self.images_pl = tf.placeholder(tf.float32, shape=input_size)
 
@@ -51,7 +52,7 @@ class RunModel(object):
         self.num_cam = 3
         self.proj_fn = proj_util.batch_orth_proj_idrot
 
-        self.num_theta = 72        
+        self.num_theta = 72
         # Theta size: camera (3) + pose (24*3) + shape (10)
         self.total_params = self.num_cam + self.num_theta + 10
 
@@ -67,22 +68,23 @@ class RunModel(object):
             self.sess = tf.Session()
         else:
             self.sess = sess
-        
+
         # Load data.
         self.saver = tf.train.Saver()
-        self.prepare()        
-
+        self.prepare()
 
     def build_test_model_ief(self):
         # Load mean value
-        self.mean_var = tf.Variable(tf.zeros((1, self.total_params)), name="mean_param", dtype=tf.float32)
+        self.mean_var = tf.Variable(tf.zeros((1, self.total_params)),
+                                    name="mean_param",
+                                    dtype=tf.float32)
 
         img_enc_fn, threed_enc_fn = get_encoder_fn_separate(self.model_type)
-        # Extract image features.        
+        # Extract image features.
         self.img_feat, self.E_var = img_enc_fn(self.images_pl,
                                                is_training=False,
                                                reuse=False)
-        
+
         # Start loop
         self.all_verts = []
         self.all_kps = []
@@ -96,22 +98,20 @@ class RunModel(object):
             state = tf.concat([self.img_feat, theta_prev], 1)
 
             if i == 0:
-                delta_theta, _ = threed_enc_fn(
-                    state,
-                    num_output=self.total_params,
-                    is_training=False,
-                    reuse=False)
+                delta_theta, _ = threed_enc_fn(state,
+                                               num_output=self.total_params,
+                                               is_training=False,
+                                               reuse=False)
             else:
-                delta_theta, _ = threed_enc_fn(
-                    state,
-                    num_output=self.total_params,
-                    is_training=False,
-                    reuse=True)
+                delta_theta, _ = threed_enc_fn(state,
+                                               num_output=self.total_params,
+                                               is_training=False,
+                                               reuse=True)
 
             # Compute new theta
             theta_here = theta_prev + delta_theta
             # cam = N x 3, pose N x self.num_theta, shape: N x 10
-            cams = theta_here[:, :self.num_cam]                
+            cams = theta_here[:, :self.num_cam]
             poses = theta_here[:, self.num_cam:(self.num_cam + self.num_theta)]
             shapes = theta_here[:, (self.num_cam + self.num_theta):]
 
@@ -128,12 +128,11 @@ class RunModel(object):
             # Finally)update to end iteration.
             theta_prev = theta_here
 
-
     def prepare(self):
         print('Restoring checkpoint %s..' % self.load_path)
-        self.saver.restore(self.sess, self.load_path)        
+        self.saver.restore(self.sess, self.load_path)
         self.mean_value = self.sess.run(self.mean_var)
-            
+
     def predict(self, images, get_theta=False):
         """
         images: num_batch, img_size, img_size, 3
@@ -141,11 +140,11 @@ class RunModel(object):
         """
         results = self.predict_dict(images)
         if get_theta:
-            return results['joints'], results['verts'], results['cams'], results[
-                'joints3d'], results['theta']
+            return results['joints'], results['verts'], results[
+                'cams'], results['joints3d'], results['theta']
         else:
-            return results['joints'], results['verts'], results['cams'], results[
-                'joints3d']
+            return results['joints'], results['verts'], results[
+                'cams'], results['joints3d']
 
     def predict_dict(self, images):
         """
