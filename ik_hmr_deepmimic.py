@@ -25,7 +25,7 @@ file_name = "gBR_sBM_c01_d04_mBR1_ch04_bboxes.h5"
 file_path = os.path.join(os.getcwd(), results_dir, file_name)
 
 video_frames = list(sorted(glob.glob("out/%s/frames/*.jpg" % base_name)))
-
+print("read data from ", file_path)
 data = dd.io.load(file_path)
 
 ## coco joints list
