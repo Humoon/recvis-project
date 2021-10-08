@@ -1,4 +1,6 @@
-.vscode
+.vscode/
+.env
+.style.yapf
 **/*/__pycache__
 *.tar.gz
 *.pyc

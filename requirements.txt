@@ -2,4 +2,5 @@ bvhtodeepmimic
 opencv-python
 matplotlib
 deepdish
+bottleneck
 # opender instal with source code

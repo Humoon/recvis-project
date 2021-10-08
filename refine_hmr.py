@@ -159,7 +159,7 @@ def run_video(frames, per_frame_people, config, out_mov_path):
             op_frame = frame.copy()
 
         op_frame = cv2.putText(op_frame.copy(),
-                               'OpenPose Output', (10, 50),
+                               'AlphaPose Output', (10, 50),
                                0,
                                1,
                                tuple([int(0) for _ in range(3)]),
